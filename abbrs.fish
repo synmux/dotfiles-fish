@@ -1,3 +1,5 @@
+abbr -a --set-cursor lc 'curl http://$TAILSCALE_IPV4:3000/%'
+abbr -a --set-cursor mrm 'rm -rf ~/.local/share/mise/installs/%'
 abbr -a 7z 7zz
 abbr -a a2 'aria2c -x8 -s8'
 abbr -a ad 'age --decrypt --identity ~/.age/'
@@ -8,7 +10,6 @@ abbr -a ba 'bundle add'
 abbr -a bad 'bundle add --group development'
 abbr -a bb 'bun run build'
 abbr -a be 'bundle exec'
-abbr -a belt 'poetry -C /Users/dave/src/github.com/daveio/belt run belt'
 abbr -a bi 'bundle init'
 abbr -a bl 'bun run lint'
 abbr -a br brew
@@ -74,8 +75,8 @@ abbr -a bund 'bun dev'
 abbr -a buni 'bun install'
 abbr -a bunr 'bun run'
 abbr -a c cargo
-abbr -a cl claude
 abbr -a ci 'cargo install'
+abbr -a cl claude
 abbr -a cm chezmoi
 abbr -a cme 'chezmoi edit'
 abbr -a cmea 'chezmoi edit --apply'
@@ -91,7 +92,6 @@ abbr -a cu cursor
 abbr -a curls 'curl --proto-default https'
 abbr -a cx 'codex --approval-mode full-auto'
 abbr -a d docker
-abbr -a daveio 'cd $HOME/src/github.com/daveio'
 abbr -a dbt 'docker build -t'
 abbr -a dc docker-compose
 abbr -a dcd 'docker compose down'
@@ -192,6 +192,7 @@ abbr -a s skaffold
 abbr -a sbrse 'sudo brew services'
 abbr -a sf 'subl ~/.config/fish'
 abbr -a sw switcher
+abbr -a synmux 'cd $HOME/src/github.com/synmux'
 abbr -a t trunk
 abbr -a task notion-task
 abbr -a task-dev 'ruby -Ilib ./bin/notion-task'
@@ -200,6 +201,7 @@ abbr -a tca 'trunk check -a'
 abbr -a tcaf 'trunk check -a --fix'
 abbr -a tdl 'tiddl download url'
 abbr -a te 'tlm explain'
+abbr -a tecapps 'cd $HOME/src/github.com/tecapps'
 abbr -a tf terraform
 abbr -a tfa 'trunk fmt -a'
 abbr -a tfix trunkfix
@@ -220,5 +222,3 @@ abbr -a vue 'pnpm run vue'
 abbr -a w wrangler
 abbr -a y 'yt-dlp --cookies-from-browser chrome --remux-video mp4'
 abbr -a zj zellij
-abbr -a --set-cursor lc 'curl http://$TAILSCALE_IPV4:3000/%'
-abbr -a --set-cursor mrs 'rm -rf ~/.local/share/mise/installs/%'
