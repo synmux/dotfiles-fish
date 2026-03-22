@@ -1,8 +1,8 @@
+abbr -a --set-cursor ad 'age --decrypt --identity ~/.age/%'
 abbr -a --set-cursor lc 'curl http://$TAILSCALE_IPV4:3000/%'
 abbr -a --set-cursor mrm 'rm -rf ~/.local/share/mise/installs/%'
 abbr -a 7z 7zz
 abbr -a a2 'aria2c -x8 -s8'
-abbr -a ad 'age --decrypt --identity ~/.age/'
 abbr -a ae 'age --encrypt --armor --recipients-file ~/.age/recipients'
 abbr -a ag agy
 abbr -a b bunnylol
