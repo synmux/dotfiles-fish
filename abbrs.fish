@@ -75,6 +75,7 @@ abbr -a bund 'bun dev'
 abbr -a buni 'bun install'
 abbr -a bunr 'bun run'
 abbr -a c cargo
+abbr -a cf 'cd $HOME/.config/fish'
 abbr -a ci 'cargo install'
 abbr -a cl claude
 abbr -a cm chezmoi
@@ -192,8 +193,10 @@ abbr -a s skaffold
 abbr -a sbrse 'sudo brew services'
 abbr -a sf 'subl ~/.config/fish'
 abbr -a sw switcher
+abbr -a sm 'cd $HOME/src/github.com/synmux'
 abbr -a synmux 'cd $HOME/src/github.com/synmux'
 abbr -a t trunk
+abbr -a ta 'cd $HOME/src/github.com/tecapps'
 abbr -a task notion-task
 abbr -a task-dev 'ruby -Ilib ./bin/notion-task'
 abbr -a tc 'trunk check'
