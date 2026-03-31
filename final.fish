@@ -8,7 +8,7 @@ function mise --wraps="mise" -d "Wrapper for mise that blocks 'mise implode'"
             echo "❌ Refusing to run 'mise implode' (disabled to prevent accidental destruction)."
             return 1
         end
-        if contains -- "implode" $argv
+        if contains -- implode $argv
             echo "❌ Refusing to run 'mise implode' (disabled to prevent accidental destruction)."
             return 1
         end
@@ -20,6 +20,3 @@ end
 fish_add_path $HOME/.lmstudio/bin
 fish_add_path $HOME/.codeium/windsurf/bin
 fish_add_path $HOME/.opencode/bin
-
-# kiro shell integration
-string match -q "$TERM_PROGRAM" "kiro" and . (kiro --locate-shell-integration-path fish)

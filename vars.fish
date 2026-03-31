@@ -6,6 +6,7 @@ set -gx CLOUDFLARE_R2_HOSTNAME $CLOUDFLARE_ACCOUNT_ID.r2.cloudflarestorage.com
 set -gx DISABLE_ZELLIJ true
 set -gx DOMAINR_API_KEY $RAPIDAPI_API_KEY
 set -gx EDITOR "code --wait"
+set -gx FPR 065602DAF36C71E6AB3A8D7014E5DFDDDAF9DBBF
 set -gx GOOGLE_CLOUD_PROJECT sl1p-production
 set -gx HOMEBREW_BUNDLE_DUMP_NO_VSCODE 1
 set -gx HOMEBREW_DISPLAY_INSTALL_TIMES 1
@@ -25,7 +26,7 @@ set -gx SEMGREP_API_KEY $SEMGREP_APP_TOKEN
 set -gx SERVERLESS_FRAMEWORK_FORCE_UPDATE true
 set -gx SHOW_ITERM2_WARNING false
 set -gx SLACK_TEAM_ID T03RUU56D
-set -gx SRC $HOME/src
+set -gx SRC $HOME/src/github.com/synmux
 set -gx SRCHOME $SRC/github.com/daveio
 set -gx TAILSCALE_IPV4 (tailscale ip -4)
 set -gx TAILSCALE_IPV6 (tailscale ip -6)

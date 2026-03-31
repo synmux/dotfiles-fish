@@ -2,6 +2,7 @@ abbr -a --set-cursor ad 'age --decrypt --identity ~/.age/%'
 abbr -a --set-cursor lc 'curl http://$TAILSCALE_IPV4:3000/%'
 abbr -a --set-cursor mrm 'rm -rf ~/.local/share/mise/installs/%'
 abbr -a 7z 7zz
+abbr -a a aerospace
 abbr -a a2 'aria2c -x8 -s8'
 abbr -a ae 'age --encrypt --armor --recipients-file ~/.age/recipients'
 abbr -a ag agy
@@ -111,11 +112,12 @@ abbr -a ef '$EDITOR ~/.config/fish'
 abbr -a emise 'chezmoi edit ~/.config/mise/config.toml'
 abbr -a fl 'open -a ForkLift'
 abbr -a fp 'git fetch --all --prune --tags --prune-tags --recurse-submodules=yes && git pull --all --prune --rebase'
-abbr -a g gcloud
+abbr -a g ghostty
 abbr -a ga 'git aa'
 abbr -a gaa 'git aa'
 abbr -a gb 'git branch'
 abbr -a gc 'git clone'
+abbr -a gcl gcloud
 abbr -a gcam 'git cam'
 abbr -a gco 'git checkout'
 abbr -a gd 'git diff'
