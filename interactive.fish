@@ -4,14 +4,8 @@ set fish_greeting
 # atuin
 atuin init fish | source
 
-Aqua
-aqua completion fish | source
-
 # mise
 mise activate fish | source
-
-# oh-my-posh
-# oh-my-posh init fish --config ~/.config/oh-my-posh.yaml | source
 
 # starship
 starship init fish | source
@@ -21,9 +15,6 @@ zoxide init fish | source
 
 # bunnylol.rs
 bunnylol completion fish | source
-
-sixkcd as motd
-$HOME/.config/fish/tools/sixkcd
 
 if test $DISABLE_ZELLIJ != true
     set ZELLIJ_AUTO_ATTACH true
