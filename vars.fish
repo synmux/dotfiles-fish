@@ -11,7 +11,6 @@ set -gx DISABLE_ZELLIJ true
 set -gx DOMAINR_API_KEY $RAPIDAPI_API_KEY
 set -gx EDITOR "zed --wait"
 set -gx FPR 065602DAF36C71E6AB3A8D7014E5DFDDDAF9DBBF
-set -gx GITHUB_TOKEN $GITHUB_API_KEY
 set -gx GOOGLE_CLOUD_PROJECT sl1p-production
 set -gx HOMEBREW_BUNDLE_DUMP_NO_VSCODE 1
 set -gx HOMEBREW_DISPLAY_INSTALL_TIMES 1
@@ -19,6 +18,11 @@ set -gx HORDE_USERNAME daveio
 set -gx MCP_TIMEOUT 31556952 # 1 year, should be enough for MA Sequential Thinking. Affects Claude Code.
 set -gx META_MCP_API_KEY $METAMCP_API_KEY
 set -gx MONO_GAC_PREFIX /opt/homebrew
+set -gx NAS_OPENSTACK_ENDPOINT "https://nas.oryx-hake.ts.net:8443/auth/v1.0"
+set -gx NAS_OPENSTACK_USERNAME_SUFFIX ":8H9canZ1hnMWJVKjSJ4B"
+set -gx NAS_S3_ENDPOINT "https://nas.oryx-hake.ts.net:8443"
+set -gx NAS_S3_SECRET $NAS_OPENSTACK_SECRET
+set -gx NAS_S3_USERNAME_SUFFIX $NAS_OPENSTACK_USERNAME_SUFFIX
 set -gx OLLAMA_HOST "http://localhost:11434"
 set -gx OP_PLUGIN_ALIASES_SOURCED 1
 set -gx PIPEDREAM_WORKSPACE_ID o_zwIXEmW
@@ -31,6 +35,7 @@ set -gx SEMGREP_API_KEY $SEMGREP_APP_TOKEN
 set -gx SERVERLESS_FRAMEWORK_FORCE_UPDATE true
 set -gx SHOW_ITERM2_WARNING false
 set -gx SLACK_TEAM_ID T03RUU56D
+set -gx SLASH_COMMAND_TOOL_CHAR_BUDGET 32000 # claude code. 3x default we think
 set -gx SRC $HOME/src/github.com/synmux
 set -gx SRCHOME $SRC/github.com/daveio
 set -gx TAILSCALE_IPV4 (tailscale ip -4)
