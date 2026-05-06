@@ -23,6 +23,7 @@ set -gx NAS_OPENSTACK_USERNAME_SUFFIX ":8H9canZ1hnMWJVKjSJ4B"
 set -gx NAS_S3_ENDPOINT "https://nas.oryx-hake.ts.net:8443"
 set -gx NAS_S3_SECRET $NAS_OPENSTACK_SECRET
 set -gx NAS_S3_USERNAME_SUFFIX $NAS_OPENSTACK_USERNAME_SUFFIX
+set -gx NODE_NO_WARNINGS 1 # probably a terrible idea. but until people update.
 set -gx OLLAMA_HOST "http://localhost:11434"
 set -gx OP_PLUGIN_ALIASES_SOURCED 1
 set -gx PIPEDREAM_WORKSPACE_ID o_zwIXEmW
