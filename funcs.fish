@@ -3,6 +3,16 @@ function nas-docker -d "Set up Docker to use the NAS"
     set -gx DOCKER_TLS_VERIFY 1
 end
 
+function lms-ai -d "Set up Claude Code and Codex for LM Studio"
+    lms server start --port 1234
+    set -gx ANTHROPIC_BASE_URL http://localhost:1234
+    set -gx ANTHROPIC_AUTH_TOKEN lmstudio
+    set -gx CLAUDE_CODE_ATTRIBUTION_HEADER 0
+    abbr -a lms-codex "codex --oss -m mlx-community/Qwen3.5-122B-A10B-4bit"
+    abbr -a lms-claude "claude --model mlx-community/Qwen3.5-122B-A10B-4bit"
+    echo "Use 'lms-codex' or 'lms-claude' to run local models"
+end
+
 function creds -d "Print env vars with a case-insensitive prefix"
     if test (count $argv) -lt 1
         echo "Usage: creds <prefix>" >&2
