@@ -38,5 +38,5 @@
         if test -f $HOMEBREW_COMMAND_NOT_FOUND_HANDLER
         source $HOMEBREW_COMMAND_NOT_FOUND_HANDLER
     end
-    source $HOME/.iterm2_shell_integration.fish
+    test -e {$HOME}/.iterm2_shell_integration.fish ; and source {$HOME}/.iterm2_shell_integration.fish
 

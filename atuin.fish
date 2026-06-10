@@ -1,211 +1,517 @@
-set -gx ATUIN_TMUX_POPUP false
-if not set -q ATUIN_SESSION; or test "$ATUIN_SHLVL" != "$SHLVL"
-    set -gx ATUIN_SESSION (atuin uuid)
-    set -gx ATUIN_SHLVL $SHLVL
-end
-set --erase ATUIN_HISTORY_ID
-
-function _atuin_preexec --on-event fish_preexec
-    if not test -n "$fish_private_mode"
-        set -g ATUIN_HISTORY_ID (atuin history start -- "$argv[1]" 2>/dev/null)
-    end
+# Print an optspec for argparse to handle cmd's options that are independent of any subcommand.
+function __fish_atuin_global_optspecs
+	string join \n h/help V/version
 end
 
-function _atuin_postexec --on-event fish_postexec
-    set -l s $status
-
-    if test -n "$ATUIN_HISTORY_ID"
-        ATUIN_LOG=error atuin history end --exit $s -- $ATUIN_HISTORY_ID &>/dev/null &
-        disown
-    end
-
-    set --erase ATUIN_HISTORY_ID
+function __fish_atuin_needs_command
+	# Figure out if the current invocation already has a command.
+	set -l cmd (commandline -opc)
+	set -e cmd[1]
+	argparse -s (__fish_atuin_global_optspecs) -- $cmd 2>/dev/null
+	or return
+	if set -q argv[1]
+		# Also print the command, so this can be used to figure out what it is.
+		echo $argv[1]
+		return 1
+	end
+	return 0
 end
 
-# Check if tmux popup is available (tmux >= 3.2)
-function _atuin_tmux_popup_check
-    if not test -n "$TMUX"
-        echo 0
-        return
-    end
-
-    if test "$ATUIN_TMUX_POPUP" = false
-        echo 0
-        return
-    end
-
-    set -l tmux_version (tmux -V 2>/dev/null | string match -r '\d+\.\d+')
-    if not test -n "$tmux_version"
-        echo 0
-        return
-    end
-
-    set -l parts (string split '.' $tmux_version)
-    set -l m1 $parts[1]
-    set -l m2 0
-    if test (count $parts) -ge 2
-        set m2 $parts[2]
-    end
-
-    if not string match -rq '^[0-9]+$' -- "$m1"
-        echo 0
-        return
-    end
-
-    if not string match -rq '^[0-9]+$' -- "$m2"
-        set m2 0
-    end
-
-    if test "$m1" -gt 3 2>/dev/null; or begin
-            test "$m1" -eq 3 2>/dev/null; and test "$m2" -ge 2 2>/dev/null
-        end
-        echo 1
-    else
-        echo 0
-    end
+function __fish_atuin_using_subcommand
+	set -l cmd (__fish_atuin_needs_command)
+	test -z "$cmd"
+	and return 1
+	contains -- $cmd[1] $argv
 end
 
-function _atuin_search
-    set -l keymap_mode
-    switch $fish_key_bindings
-        case fish_vi_key_bindings
-            switch $fish_bind_mode
-                case default
-                    set keymap_mode vim-normal
-                case insert
-                    set keymap_mode vim-insert
-            end
-        case '*'
-            set keymap_mode emacs
-    end
-
-    set -l use_tmux_popup (_atuin_tmux_popup_check)
-
-    set -l ATUIN_H
-    if test "$use_tmux_popup" -eq 1
-        set -l tmpdir (mktemp -d)
-        if not test -d "$tmpdir"
-            # if mktemp got errors
-            set ATUIN_H (ATUIN_SHELL=fish ATUIN_LOG=error ATUIN_QUERY=(commandline -b) atuin search --keymap-mode=$keymap_mode $argv -i 3>&1 1>&2 2>&3 | string collect)
-        else
-            set -l result_file "$tmpdir/result"
-
-            set -l query (commandline -b | string replace -a "'" "'\\''")
-            set -l escaped_args ""
-            for arg in $argv
-                set escaped_args "$escaped_args '"(string replace -a "'" "'\\''" -- $arg)"'"
-            end
-
-            # In the popup, atuin goes to terminal, stderr goes to file
-            set -l cdir (pwd)
-            # Keep default value anyways
-            set -l popup_width (test -n "$ATUIN_TMUX_POPUP_WIDTH" && echo "$ATUIN_TMUX_POPUP_WIDTH" || echo "80%")
-            set -l popup_height (test -n "$ATUIN_TMUX_POPUP_HEIGHT" && echo "$ATUIN_TMUX_POPUP_HEIGHT" || echo "60%")
-            tmux display-popup -d "$cdir" -w "$popup_width" -h "$popup_height" -E -E -- \
-                sh -c "PATH='$PATH' ATUIN_SESSION='$ATUIN_SESSION' ATUIN_SHELL=fish ATUIN_LOG=error ATUIN_QUERY='$query' atuin search --keymap-mode=$keymap_mode$escaped_args -i 2>'$result_file'"
-
-            if test -f "$result_file"
-                set ATUIN_H (cat "$result_file" | string collect)
-            end
-
-            command rm -rf "$tmpdir"
-        end
-    else
-        # In fish 3.4 and above we can use `"$(some command)"` to keep multiple lines separate;
-        # but to support fish 3.3 we need to use `(some command | string collect)`.
-        # https://fishshell.com/docs/current/relnotes.html#id24 (fish 3.4 "Notable improvements and fixes")
-        set ATUIN_H (ATUIN_SHELL=fish ATUIN_LOG=error ATUIN_QUERY=(commandline -b) atuin search --keymap-mode=$keymap_mode $argv -i 3>&1 1>&2 2>&3 | string collect)
-    end
-
-    set ATUIN_H (string trim -- $ATUIN_H | string collect) # trim whitespace
-
-    if test -n "$ATUIN_H"
-        if string match --quiet '__atuin_accept__:*' "$ATUIN_H"
-            set -l ATUIN_HIST (string replace "__atuin_accept__:" "" -- "$ATUIN_H" | string collect)
-            commandline -r "$ATUIN_HIST"
-            commandline -f repaint
-            commandline -f execute
-            return
-        else
-            commandline -r "$ATUIN_H"
-        end
-    end
-
-    commandline -f repaint
-end
-
-function _atuin_bind_up
-    # Fallback to fish's builtin up-or-search if we're in search or paging mode
-    if commandline --search-mode; or commandline --paging-mode
-        up-or-search
-        return
-    end
-
-    # Only invoke atuin if we're on the top line of the command
-    set -l lineno (commandline --line)
-
-    switch $lineno
-        case 1
-            _atuin_search --shell-up-key-binding
-        case '*'
-            up-or-search
-    end
-end
-
-if string match -q '4.*' $version
-    bind ctrl-r _atuin_search
-    bind up _atuin_bind_up
-    if bind -M insert >/dev/null 2>&1
-        bind -M insert ctrl-r _atuin_search
-        bind -M insert up _atuin_bind_up
-    end
-else
-    bind \cr _atuin_search
-    bind -k up _atuin_bind_up; bind \eOA _atuin_bind_up; bind \e\[A _atuin_bind_up
-    if bind -M insert >/dev/null 2>&1
-        bind -M insert \cr _atuin_search
-        bind -M insert -k up _atuin_bind_up; bind -M insert \eOA _atuin_bind_up; bind -M insert \e\[A _atuin_bind_up
-    end
-end
-# Question mark at start of line - natural language mode
-function _atuin_ai_question_mark
-    set -l buf (commandline -b)
-
-    # If buffer is empty or just contains '?', trigger natural language mode
-    if test -z "$buf" -o "$buf" = "?"
-        commandline -r ""
-
-        # Run atuin ai inline, swapping stdout and stderr
-        set -l output (atuin ai inline --hook 3>&1 1>&2 2>&3 | string collect)
-
-        if string match --quiet '__atuin_ai_print__:*' "$output"
-            echo (string replace "__atuin_ai_print__:" "" -- "$output" | string collect)
-            commandline -f repaint
-        else if test "$output" = "__atuin_ai_cancel__"
-            commandline -f repaint
-        else if string match --quiet '__atuin_ai_execute__:*' "$output"
-            # Execute the command immediately
-            set -l cmd (string replace "__atuin_ai_execute__:" "" -- "$output" | string collect)
-            commandline -r "$cmd"
-            commandline -f repaint
-            commandline -f execute
-        else if string match --quiet '__atuin_ai_insert__:*' "$output"
-            # Insert the command for editing
-            set -l cmd (string replace "__atuin_ai_insert__:" "" -- "$output" | string collect)
-            commandline -r "$cmd"
-            commandline -f repaint
-        else if test -n "$output"
-            # Default: insert for editing
-            commandline -r "$output"
-            commandline -f repaint
-        else
-            commandline -f repaint
-        end
-    else
-        # Not at empty prompt, just insert the question mark
-        commandline -i "?"
-    end
-end
-
-# Set up keybindings
-bind "?" _atuin_ai_question_mark
+complete -c atuin -n "__fish_atuin_needs_command" -s h -l help -d 'Print help'
+complete -c atuin -n "__fish_atuin_needs_command" -s V -l version -d 'Print version'
+complete -c atuin -n "__fish_atuin_needs_command" -f -a "setup" -d 'Setup Atuin features'
+complete -c atuin -n "__fish_atuin_needs_command" -f -a "history" -d 'Manipulate shell history'
+complete -c atuin -n "__fish_atuin_needs_command" -f -a "hook" -d 'Manage AI-agent shell hooks'
+complete -c atuin -n "__fish_atuin_needs_command" -f -a "import" -d 'Import shell history from file'
+complete -c atuin -n "__fish_atuin_needs_command" -f -a "stats" -d 'Calculate statistics for your history'
+complete -c atuin -n "__fish_atuin_needs_command" -f -a "search" -d 'Interactive history search'
+complete -c atuin -n "__fish_atuin_needs_command" -f -a "sync" -d 'Sync with the configured server'
+complete -c atuin -n "__fish_atuin_needs_command" -f -a "login" -d 'Login to the configured server'
+complete -c atuin -n "__fish_atuin_needs_command" -f -a "logout" -d 'Log out'
+complete -c atuin -n "__fish_atuin_needs_command" -f -a "register" -d 'Register with the configured server'
+complete -c atuin -n "__fish_atuin_needs_command" -f -a "key" -d 'Print the encryption key for transfer to another machine'
+complete -c atuin -n "__fish_atuin_needs_command" -f -a "status" -d 'Display the sync status'
+complete -c atuin -n "__fish_atuin_needs_command" -f -a "account" -d 'Manage your sync account'
+complete -c atuin -n "__fish_atuin_needs_command" -f -a "kv" -d 'Get or set small key-value pairs'
+complete -c atuin -n "__fish_atuin_needs_command" -f -a "store" -d 'Manage the atuin data store'
+complete -c atuin -n "__fish_atuin_needs_command" -f -a "dotfiles" -d 'Manage your dotfiles with Atuin'
+complete -c atuin -n "__fish_atuin_needs_command" -f -a "scripts" -d 'Manage your scripts with Atuin'
+complete -c atuin -n "__fish_atuin_needs_command" -f -a "init" -d 'Print Atuin\'s shell init script'
+complete -c atuin -n "__fish_atuin_needs_command" -f -a "info" -d 'Information about dotfiles locations and ENV vars'
+complete -c atuin -n "__fish_atuin_needs_command" -f -a "doctor" -d 'Run the doctor to check for common issues'
+complete -c atuin -n "__fish_atuin_needs_command" -f -a "wrapped"
+complete -c atuin -n "__fish_atuin_needs_command" -f -a "daemon" -d '*Experimental* Manage the background daemon'
+complete -c atuin -n "__fish_atuin_needs_command" -f -a "default-config" -d 'Print the default atuin configuration (config.toml)'
+complete -c atuin -n "__fish_atuin_needs_command" -f -a "config"
+complete -c atuin -n "__fish_atuin_needs_command" -f -a "ai" -d 'Run the AI assistant'
+complete -c atuin -n "__fish_atuin_needs_command" -f -a "pty-proxy" -d 'PTY proxy for atuin'
+complete -c atuin -n "__fish_atuin_needs_command" -f -a "uuid" -d 'Generate a UUID'
+complete -c atuin -n "__fish_atuin_needs_command" -f -a "contributors"
+complete -c atuin -n "__fish_atuin_needs_command" -f -a "gen-completions" -d 'Generate shell completions'
+complete -c atuin -n "__fish_atuin_needs_command" -f -a "help" -d 'Print this message or the help of the given subcommand(s)'
+complete -c atuin -n "__fish_atuin_using_subcommand setup" -s h -l help -d 'Print help'
+complete -c atuin -n "__fish_atuin_using_subcommand history; and not __fish_seen_subcommand_from start end tail list last init-store prune dedup help" -s h -l help -d 'Print help'
+complete -c atuin -n "__fish_atuin_using_subcommand history; and not __fish_seen_subcommand_from start end tail list last init-store prune dedup help" -f -a "start" -d 'Begins a new command in the history'
+complete -c atuin -n "__fish_atuin_using_subcommand history; and not __fish_seen_subcommand_from start end tail list last init-store prune dedup help" -f -a "end" -d 'Finishes a new command in the history (adds time, exit code)'
+complete -c atuin -n "__fish_atuin_using_subcommand history; and not __fish_seen_subcommand_from start end tail list last init-store prune dedup help" -f -a "tail" -d 'Stream history events from the daemon as they are received'
+complete -c atuin -n "__fish_atuin_using_subcommand history; and not __fish_seen_subcommand_from start end tail list last init-store prune dedup help" -f -a "list" -d 'List all items in history'
+complete -c atuin -n "__fish_atuin_using_subcommand history; and not __fish_seen_subcommand_from start end tail list last init-store prune dedup help" -f -a "last" -d 'Get the last command ran'
+complete -c atuin -n "__fish_atuin_using_subcommand history; and not __fish_seen_subcommand_from start end tail list last init-store prune dedup help" -f -a "init-store"
+complete -c atuin -n "__fish_atuin_using_subcommand history; and not __fish_seen_subcommand_from start end tail list last init-store prune dedup help" -f -a "prune" -d 'Delete history entries matching the configured exclusion filters'
+complete -c atuin -n "__fish_atuin_using_subcommand history; and not __fish_seen_subcommand_from start end tail list last init-store prune dedup help" -f -a "dedup" -d 'Delete duplicate history entries (that have the same command, cwd and hostname)'
+complete -c atuin -n "__fish_atuin_using_subcommand history; and not __fish_seen_subcommand_from start end tail list last init-store prune dedup help" -f -a "help" -d 'Print this message or the help of the given subcommand(s)'
+complete -c atuin -n "__fish_atuin_using_subcommand history; and __fish_seen_subcommand_from start" -l author -d 'Author of this command, eg `ellie`, `claude`, or `copilot`' -r
+complete -c atuin -n "__fish_atuin_using_subcommand history; and __fish_seen_subcommand_from start" -l intent -d 'Optional intent/rationale for running this command' -r
+complete -c atuin -n "__fish_atuin_using_subcommand history; and __fish_seen_subcommand_from start" -l command-from-env -d 'Collects the command from the `ATUIN_COMMAND_LINE` environment variable, which does not need escaping and is more compatible between OS and shells'
+complete -c atuin -n "__fish_atuin_using_subcommand history; and __fish_seen_subcommand_from start" -s h -l help -d 'Print help'
+complete -c atuin -n "__fish_atuin_using_subcommand history; and __fish_seen_subcommand_from end" -s e -l exit -r
+complete -c atuin -n "__fish_atuin_using_subcommand history; and __fish_seen_subcommand_from end" -s d -l duration -r
+complete -c atuin -n "__fish_atuin_using_subcommand history; and __fish_seen_subcommand_from end" -s h -l help -d 'Print help'
+complete -c atuin -n "__fish_atuin_using_subcommand history; and __fish_seen_subcommand_from tail" -s h -l help -d 'Print help'
+complete -c atuin -n "__fish_atuin_using_subcommand history; and __fish_seen_subcommand_from list" -s r -l reverse -r -f -a "true\t''
+false\t''"
+complete -c atuin -n "__fish_atuin_using_subcommand history; and __fish_seen_subcommand_from list" -l timezone -l tz -d 'Display the command time in another timezone other than the configured default' -r
+complete -c atuin -n "__fish_atuin_using_subcommand history; and __fish_seen_subcommand_from list" -s f -l format -d 'Available variables: {command}, {directory}, {duration}, {user}, {host}, {author}, {intent}, {exit}, {time}, {session}, and {uuid} Example: --format "{time} - [{duration}] - {directory}$\\t{command}"' -r
+complete -c atuin -n "__fish_atuin_using_subcommand history; and __fish_seen_subcommand_from list" -s c -l cwd
+complete -c atuin -n "__fish_atuin_using_subcommand history; and __fish_seen_subcommand_from list" -s s -l session
+complete -c atuin -n "__fish_atuin_using_subcommand history; and __fish_seen_subcommand_from list" -l human
+complete -c atuin -n "__fish_atuin_using_subcommand history; and __fish_seen_subcommand_from list" -l cmd-only -d 'Show only the text of the command'
+complete -c atuin -n "__fish_atuin_using_subcommand history; and __fish_seen_subcommand_from list" -l print0 -d 'Terminate the output with a null, for better multiline support'
+complete -c atuin -n "__fish_atuin_using_subcommand history; and __fish_seen_subcommand_from list" -s h -l help -d 'Print help (see more with \'--help\')'
+complete -c atuin -n "__fish_atuin_using_subcommand history; and __fish_seen_subcommand_from last" -l timezone -l tz -d 'Display the command time in another timezone other than the configured default' -r
+complete -c atuin -n "__fish_atuin_using_subcommand history; and __fish_seen_subcommand_from last" -s f -l format -d 'Available variables: {command}, {directory}, {duration}, {user}, {host}, {author}, {intent}, {time}, {session}, {uuid} and {relativetime}. Example: --format "{time} - [{duration}] - {directory}$\\t{command}"' -r
+complete -c atuin -n "__fish_atuin_using_subcommand history; and __fish_seen_subcommand_from last" -l human
+complete -c atuin -n "__fish_atuin_using_subcommand history; and __fish_seen_subcommand_from last" -l cmd-only -d 'Show only the text of the command'
+complete -c atuin -n "__fish_atuin_using_subcommand history; and __fish_seen_subcommand_from last" -s h -l help -d 'Print help (see more with \'--help\')'
+complete -c atuin -n "__fish_atuin_using_subcommand history; and __fish_seen_subcommand_from init-store" -s h -l help -d 'Print help'
+complete -c atuin -n "__fish_atuin_using_subcommand history; and __fish_seen_subcommand_from prune" -s n -l dry-run -d 'List matching history lines without performing the actual deletion'
+complete -c atuin -n "__fish_atuin_using_subcommand history; and __fish_seen_subcommand_from prune" -s h -l help -d 'Print help'
+complete -c atuin -n "__fish_atuin_using_subcommand history; and __fish_seen_subcommand_from dedup" -s b -l before -d 'Only delete results added before this date' -r
+complete -c atuin -n "__fish_atuin_using_subcommand history; and __fish_seen_subcommand_from dedup" -l dupkeep -d 'How many recent duplicates to keep' -r
+complete -c atuin -n "__fish_atuin_using_subcommand history; and __fish_seen_subcommand_from dedup" -s n -l dry-run -d 'List matching history lines without performing the actual deletion'
+complete -c atuin -n "__fish_atuin_using_subcommand history; and __fish_seen_subcommand_from dedup" -s h -l help -d 'Print help'
+complete -c atuin -n "__fish_atuin_using_subcommand history; and __fish_seen_subcommand_from help" -f -a "start" -d 'Begins a new command in the history'
+complete -c atuin -n "__fish_atuin_using_subcommand history; and __fish_seen_subcommand_from help" -f -a "end" -d 'Finishes a new command in the history (adds time, exit code)'
+complete -c atuin -n "__fish_atuin_using_subcommand history; and __fish_seen_subcommand_from help" -f -a "tail" -d 'Stream history events from the daemon as they are received'
+complete -c atuin -n "__fish_atuin_using_subcommand history; and __fish_seen_subcommand_from help" -f -a "list" -d 'List all items in history'
+complete -c atuin -n "__fish_atuin_using_subcommand history; and __fish_seen_subcommand_from help" -f -a "last" -d 'Get the last command ran'
+complete -c atuin -n "__fish_atuin_using_subcommand history; and __fish_seen_subcommand_from help" -f -a "init-store"
+complete -c atuin -n "__fish_atuin_using_subcommand history; and __fish_seen_subcommand_from help" -f -a "prune" -d 'Delete history entries matching the configured exclusion filters'
+complete -c atuin -n "__fish_atuin_using_subcommand history; and __fish_seen_subcommand_from help" -f -a "dedup" -d 'Delete duplicate history entries (that have the same command, cwd and hostname)'
+complete -c atuin -n "__fish_atuin_using_subcommand history; and __fish_seen_subcommand_from help" -f -a "help" -d 'Print this message or the help of the given subcommand(s)'
+complete -c atuin -n "__fish_atuin_using_subcommand hook; and not __fish_seen_subcommand_from install help" -s h -l help -d 'Print help'
+complete -c atuin -n "__fish_atuin_using_subcommand hook; and not __fish_seen_subcommand_from install help" -a "install" -d 'Install hooks for an AI agent to capture commands in atuin history'
+complete -c atuin -n "__fish_atuin_using_subcommand hook; and not __fish_seen_subcommand_from install help" -a "help" -d 'Print this message or the help of the given subcommand(s)'
+complete -c atuin -n "__fish_atuin_using_subcommand hook; and __fish_seen_subcommand_from install" -s h -l help -d 'Print help'
+complete -c atuin -n "__fish_atuin_using_subcommand hook; and __fish_seen_subcommand_from help" -f -a "install" -d 'Install hooks for an AI agent to capture commands in atuin history'
+complete -c atuin -n "__fish_atuin_using_subcommand hook; and __fish_seen_subcommand_from help" -f -a "help" -d 'Print this message or the help of the given subcommand(s)'
+complete -c atuin -n "__fish_atuin_using_subcommand import; and not __fish_seen_subcommand_from auto zsh zsh-hist-db bash replxx resh fish nu nu-hist-db xonsh xonsh-sqlite powershell help" -s h -l help -d 'Print help'
+complete -c atuin -n "__fish_atuin_using_subcommand import; and not __fish_seen_subcommand_from auto zsh zsh-hist-db bash replxx resh fish nu nu-hist-db xonsh xonsh-sqlite powershell help" -f -a "auto" -d 'Import history for the current shell'
+complete -c atuin -n "__fish_atuin_using_subcommand import; and not __fish_seen_subcommand_from auto zsh zsh-hist-db bash replxx resh fish nu nu-hist-db xonsh xonsh-sqlite powershell help" -f -a "zsh" -d 'Import history from the zsh history file'
+complete -c atuin -n "__fish_atuin_using_subcommand import; and not __fish_seen_subcommand_from auto zsh zsh-hist-db bash replxx resh fish nu nu-hist-db xonsh xonsh-sqlite powershell help" -f -a "zsh-hist-db" -d 'Import history from the zsh history file'
+complete -c atuin -n "__fish_atuin_using_subcommand import; and not __fish_seen_subcommand_from auto zsh zsh-hist-db bash replxx resh fish nu nu-hist-db xonsh xonsh-sqlite powershell help" -f -a "bash" -d 'Import history from the bash history file'
+complete -c atuin -n "__fish_atuin_using_subcommand import; and not __fish_seen_subcommand_from auto zsh zsh-hist-db bash replxx resh fish nu nu-hist-db xonsh xonsh-sqlite powershell help" -f -a "replxx" -d 'Import history from the replxx history file'
+complete -c atuin -n "__fish_atuin_using_subcommand import; and not __fish_seen_subcommand_from auto zsh zsh-hist-db bash replxx resh fish nu nu-hist-db xonsh xonsh-sqlite powershell help" -f -a "resh" -d 'Import history from the resh history file'
+complete -c atuin -n "__fish_atuin_using_subcommand import; and not __fish_seen_subcommand_from auto zsh zsh-hist-db bash replxx resh fish nu nu-hist-db xonsh xonsh-sqlite powershell help" -f -a "fish" -d 'Import history from the fish history file'
+complete -c atuin -n "__fish_atuin_using_subcommand import; and not __fish_seen_subcommand_from auto zsh zsh-hist-db bash replxx resh fish nu nu-hist-db xonsh xonsh-sqlite powershell help" -f -a "nu" -d 'Import history from the nu history file'
+complete -c atuin -n "__fish_atuin_using_subcommand import; and not __fish_seen_subcommand_from auto zsh zsh-hist-db bash replxx resh fish nu nu-hist-db xonsh xonsh-sqlite powershell help" -f -a "nu-hist-db" -d 'Import history from the nu history file'
+complete -c atuin -n "__fish_atuin_using_subcommand import; and not __fish_seen_subcommand_from auto zsh zsh-hist-db bash replxx resh fish nu nu-hist-db xonsh xonsh-sqlite powershell help" -f -a "xonsh" -d 'Import history from xonsh json files'
+complete -c atuin -n "__fish_atuin_using_subcommand import; and not __fish_seen_subcommand_from auto zsh zsh-hist-db bash replxx resh fish nu nu-hist-db xonsh xonsh-sqlite powershell help" -f -a "xonsh-sqlite" -d 'Import history from xonsh sqlite db'
+complete -c atuin -n "__fish_atuin_using_subcommand import; and not __fish_seen_subcommand_from auto zsh zsh-hist-db bash replxx resh fish nu nu-hist-db xonsh xonsh-sqlite powershell help" -f -a "powershell" -d 'Import history from the powershell history file'
+complete -c atuin -n "__fish_atuin_using_subcommand import; and not __fish_seen_subcommand_from auto zsh zsh-hist-db bash replxx resh fish nu nu-hist-db xonsh xonsh-sqlite powershell help" -f -a "help" -d 'Print this message or the help of the given subcommand(s)'
+complete -c atuin -n "__fish_atuin_using_subcommand import; and __fish_seen_subcommand_from auto" -s h -l help -d 'Print help'
+complete -c atuin -n "__fish_atuin_using_subcommand import; and __fish_seen_subcommand_from zsh" -s h -l help -d 'Print help'
+complete -c atuin -n "__fish_atuin_using_subcommand import; and __fish_seen_subcommand_from zsh-hist-db" -s h -l help -d 'Print help'
+complete -c atuin -n "__fish_atuin_using_subcommand import; and __fish_seen_subcommand_from bash" -s h -l help -d 'Print help'
+complete -c atuin -n "__fish_atuin_using_subcommand import; and __fish_seen_subcommand_from replxx" -s h -l help -d 'Print help'
+complete -c atuin -n "__fish_atuin_using_subcommand import; and __fish_seen_subcommand_from resh" -s h -l help -d 'Print help'
+complete -c atuin -n "__fish_atuin_using_subcommand import; and __fish_seen_subcommand_from fish" -s h -l help -d 'Print help'
+complete -c atuin -n "__fish_atuin_using_subcommand import; and __fish_seen_subcommand_from nu" -s h -l help -d 'Print help'
+complete -c atuin -n "__fish_atuin_using_subcommand import; and __fish_seen_subcommand_from nu-hist-db" -s h -l help -d 'Print help'
+complete -c atuin -n "__fish_atuin_using_subcommand import; and __fish_seen_subcommand_from xonsh" -s h -l help -d 'Print help'
+complete -c atuin -n "__fish_atuin_using_subcommand import; and __fish_seen_subcommand_from xonsh-sqlite" -s h -l help -d 'Print help'
+complete -c atuin -n "__fish_atuin_using_subcommand import; and __fish_seen_subcommand_from powershell" -s h -l help -d 'Print help'
+complete -c atuin -n "__fish_atuin_using_subcommand import; and __fish_seen_subcommand_from help" -f -a "auto" -d 'Import history for the current shell'
+complete -c atuin -n "__fish_atuin_using_subcommand import; and __fish_seen_subcommand_from help" -f -a "zsh" -d 'Import history from the zsh history file'
+complete -c atuin -n "__fish_atuin_using_subcommand import; and __fish_seen_subcommand_from help" -f -a "zsh-hist-db" -d 'Import history from the zsh history file'
+complete -c atuin -n "__fish_atuin_using_subcommand import; and __fish_seen_subcommand_from help" -f -a "bash" -d 'Import history from the bash history file'
+complete -c atuin -n "__fish_atuin_using_subcommand import; and __fish_seen_subcommand_from help" -f -a "replxx" -d 'Import history from the replxx history file'
+complete -c atuin -n "__fish_atuin_using_subcommand import; and __fish_seen_subcommand_from help" -f -a "resh" -d 'Import history from the resh history file'
+complete -c atuin -n "__fish_atuin_using_subcommand import; and __fish_seen_subcommand_from help" -f -a "fish" -d 'Import history from the fish history file'
+complete -c atuin -n "__fish_atuin_using_subcommand import; and __fish_seen_subcommand_from help" -f -a "nu" -d 'Import history from the nu history file'
+complete -c atuin -n "__fish_atuin_using_subcommand import; and __fish_seen_subcommand_from help" -f -a "nu-hist-db" -d 'Import history from the nu history file'
+complete -c atuin -n "__fish_atuin_using_subcommand import; and __fish_seen_subcommand_from help" -f -a "xonsh" -d 'Import history from xonsh json files'
+complete -c atuin -n "__fish_atuin_using_subcommand import; and __fish_seen_subcommand_from help" -f -a "xonsh-sqlite" -d 'Import history from xonsh sqlite db'
+complete -c atuin -n "__fish_atuin_using_subcommand import; and __fish_seen_subcommand_from help" -f -a "powershell" -d 'Import history from the powershell history file'
+complete -c atuin -n "__fish_atuin_using_subcommand import; and __fish_seen_subcommand_from help" -f -a "help" -d 'Print this message or the help of the given subcommand(s)'
+complete -c atuin -n "__fish_atuin_using_subcommand stats" -s c -l count -d 'How many top commands to list' -r
+complete -c atuin -n "__fish_atuin_using_subcommand stats" -s n -l ngram-size -d 'The number of consecutive commands to consider' -r
+complete -c atuin -n "__fish_atuin_using_subcommand stats" -s h -l help -d 'Print help'
+complete -c atuin -n "__fish_atuin_using_subcommand search" -s c -l cwd -d 'Filter search result by directory' -r
+complete -c atuin -n "__fish_atuin_using_subcommand search" -l exclude-cwd -d 'Exclude directory from results' -r
+complete -c atuin -n "__fish_atuin_using_subcommand search" -s e -l exit -d 'Filter search result by exit code' -r
+complete -c atuin -n "__fish_atuin_using_subcommand search" -l exclude-exit -d 'Exclude results with this exit code' -r
+complete -c atuin -n "__fish_atuin_using_subcommand search" -s b -l before -d 'Only include results added before this date' -r
+complete -c atuin -n "__fish_atuin_using_subcommand search" -l after -d 'Only include results after this date' -r
+complete -c atuin -n "__fish_atuin_using_subcommand search" -l limit -d 'How many entries to return at most' -r
+complete -c atuin -n "__fish_atuin_using_subcommand search" -l offset -d 'Offset from the start of the results' -r
+complete -c atuin -n "__fish_atuin_using_subcommand search" -l filter-mode -d 'Allow overriding filter mode over config' -r -f -a "global\t''
+host\t''
+session\t''
+directory\t''
+workspace\t''
+session-preload\t''"
+complete -c atuin -n "__fish_atuin_using_subcommand search" -l search-mode -d 'Allow overriding search mode over config' -r -f -a "prefix\t''
+full-text\t''
+fuzzy\t''
+skim\t''
+daemon-fuzzy\t''"
+complete -c atuin -n "__fish_atuin_using_subcommand search" -l keymap-mode -d 'Notify the keymap at the shell\'s side' -r -f -a "emacs\t''
+vim-normal\t''
+vim-insert\t''
+auto\t''"
+complete -c atuin -n "__fish_atuin_using_subcommand search" -l timezone -l tz -d 'Display the command time in another timezone other than the configured default' -r
+complete -c atuin -n "__fish_atuin_using_subcommand search" -s f -l format -d 'Available variables: {command}, {directory}, {duration}, {user}, {host}, {time}, {exit} and {relativetime}. Example: --format "{time} - [{duration}] - {directory}$\\t{command}"' -r
+complete -c atuin -n "__fish_atuin_using_subcommand search" -l inline-height -d 'Set the maximum number of lines Atuin\'s interface should take up' -r
+complete -c atuin -n "__fish_atuin_using_subcommand search" -l author -d 'Filter by author. Supports $all-user (non-agents), $all-agent, or literal names. Can be specified multiple times' -r
+complete -c atuin -n "__fish_atuin_using_subcommand search" -l result-file -d 'File name to write the result to (hidden from help as this is meant to be used from a script)' -r
+complete -c atuin -n "__fish_atuin_using_subcommand search" -s i -l interactive -d 'Open interactive search UI'
+complete -c atuin -n "__fish_atuin_using_subcommand search" -l shell-up-key-binding -d 'Marker argument used to inform atuin that it was invoked from a shell up-key binding (hidden from help to avoid confusion)'
+complete -c atuin -n "__fish_atuin_using_subcommand search" -l human -d 'Use human-readable formatting for time'
+complete -c atuin -n "__fish_atuin_using_subcommand search" -l cmd-only -d 'Show only the text of the command'
+complete -c atuin -n "__fish_atuin_using_subcommand search" -l print0 -d 'Terminate the output with a null, for better multiline handling'
+complete -c atuin -n "__fish_atuin_using_subcommand search" -l delete -d 'Delete anything matching this query. Will not print out the match'
+complete -c atuin -n "__fish_atuin_using_subcommand search" -l delete-it-all -d 'Delete EVERYTHING!'
+complete -c atuin -n "__fish_atuin_using_subcommand search" -s r -l reverse -d 'Reverse the order of results, oldest first'
+complete -c atuin -n "__fish_atuin_using_subcommand search" -l include-duplicates -d 'Include duplicate commands in the output (non-interactive only)'
+complete -c atuin -n "__fish_atuin_using_subcommand search" -s h -l help -d 'Print help (see more with \'--help\')'
+complete -c atuin -n "__fish_atuin_using_subcommand sync" -s f -l force -d 'Force re-download everything'
+complete -c atuin -n "__fish_atuin_using_subcommand sync" -s h -l help -d 'Print help'
+complete -c atuin -n "__fish_atuin_using_subcommand login" -s u -l username -r
+complete -c atuin -n "__fish_atuin_using_subcommand login" -s p -l password -r
+complete -c atuin -n "__fish_atuin_using_subcommand login" -s k -l key -d 'The encryption key for your account' -r
+complete -c atuin -n "__fish_atuin_using_subcommand login" -s t -l totp-code -d 'The two-factor authentication code for your account, if any' -r
+complete -c atuin -n "__fish_atuin_using_subcommand login" -l from-registration
+complete -c atuin -n "__fish_atuin_using_subcommand login" -s h -l help -d 'Print help'
+complete -c atuin -n "__fish_atuin_using_subcommand logout" -s h -l help -d 'Print help'
+complete -c atuin -n "__fish_atuin_using_subcommand register" -s u -l username -r
+complete -c atuin -n "__fish_atuin_using_subcommand register" -s p -l password -r
+complete -c atuin -n "__fish_atuin_using_subcommand register" -s e -l email -r
+complete -c atuin -n "__fish_atuin_using_subcommand register" -s h -l help -d 'Print help'
+complete -c atuin -n "__fish_atuin_using_subcommand key" -l base64 -d 'Switch to base64 output of the key'
+complete -c atuin -n "__fish_atuin_using_subcommand key" -s h -l help -d 'Print help'
+complete -c atuin -n "__fish_atuin_using_subcommand status" -s h -l help -d 'Print help'
+complete -c atuin -n "__fish_atuin_using_subcommand account; and not __fish_seen_subcommand_from login register logout delete change-password link help" -s h -l help -d 'Print help'
+complete -c atuin -n "__fish_atuin_using_subcommand account; and not __fish_seen_subcommand_from login register logout delete change-password link help" -f -a "login" -d 'Login to the configured server'
+complete -c atuin -n "__fish_atuin_using_subcommand account; and not __fish_seen_subcommand_from login register logout delete change-password link help" -f -a "register" -d 'Register a new account'
+complete -c atuin -n "__fish_atuin_using_subcommand account; and not __fish_seen_subcommand_from login register logout delete change-password link help" -f -a "logout" -d 'Log out'
+complete -c atuin -n "__fish_atuin_using_subcommand account; and not __fish_seen_subcommand_from login register logout delete change-password link help" -f -a "delete" -d 'Delete your account, and all synced data'
+complete -c atuin -n "__fish_atuin_using_subcommand account; and not __fish_seen_subcommand_from login register logout delete change-password link help" -f -a "change-password" -d 'Change your password'
+complete -c atuin -n "__fish_atuin_using_subcommand account; and not __fish_seen_subcommand_from login register logout delete change-password link help" -f -a "link" -d 'Link your CLI sync account to your Hub account'
+complete -c atuin -n "__fish_atuin_using_subcommand account; and not __fish_seen_subcommand_from login register logout delete change-password link help" -f -a "help" -d 'Print this message or the help of the given subcommand(s)'
+complete -c atuin -n "__fish_atuin_using_subcommand account; and __fish_seen_subcommand_from login" -s u -l username -r
+complete -c atuin -n "__fish_atuin_using_subcommand account; and __fish_seen_subcommand_from login" -s p -l password -r
+complete -c atuin -n "__fish_atuin_using_subcommand account; and __fish_seen_subcommand_from login" -s k -l key -d 'The encryption key for your account' -r
+complete -c atuin -n "__fish_atuin_using_subcommand account; and __fish_seen_subcommand_from login" -s t -l totp-code -d 'The two-factor authentication code for your account, if any' -r
+complete -c atuin -n "__fish_atuin_using_subcommand account; and __fish_seen_subcommand_from login" -l from-registration
+complete -c atuin -n "__fish_atuin_using_subcommand account; and __fish_seen_subcommand_from login" -s h -l help -d 'Print help'
+complete -c atuin -n "__fish_atuin_using_subcommand account; and __fish_seen_subcommand_from register" -s u -l username -r
+complete -c atuin -n "__fish_atuin_using_subcommand account; and __fish_seen_subcommand_from register" -s p -l password -r
+complete -c atuin -n "__fish_atuin_using_subcommand account; and __fish_seen_subcommand_from register" -s e -l email -r
+complete -c atuin -n "__fish_atuin_using_subcommand account; and __fish_seen_subcommand_from register" -s h -l help -d 'Print help'
+complete -c atuin -n "__fish_atuin_using_subcommand account; and __fish_seen_subcommand_from logout" -s h -l help -d 'Print help'
+complete -c atuin -n "__fish_atuin_using_subcommand account; and __fish_seen_subcommand_from delete" -s p -l password -r
+complete -c atuin -n "__fish_atuin_using_subcommand account; and __fish_seen_subcommand_from delete" -s t -l totp-code -d 'The two-factor authentication code for your account, if any' -r
+complete -c atuin -n "__fish_atuin_using_subcommand account; and __fish_seen_subcommand_from delete" -s h -l help -d 'Print help'
+complete -c atuin -n "__fish_atuin_using_subcommand account; and __fish_seen_subcommand_from change-password" -s c -l current-password -r
+complete -c atuin -n "__fish_atuin_using_subcommand account; and __fish_seen_subcommand_from change-password" -s n -l new-password -r
+complete -c atuin -n "__fish_atuin_using_subcommand account; and __fish_seen_subcommand_from change-password" -s t -l totp-code -d 'The two-factor authentication code for your account, if any' -r
+complete -c atuin -n "__fish_atuin_using_subcommand account; and __fish_seen_subcommand_from change-password" -s h -l help -d 'Print help'
+complete -c atuin -n "__fish_atuin_using_subcommand account; and __fish_seen_subcommand_from link" -s h -l help -d 'Print help'
+complete -c atuin -n "__fish_atuin_using_subcommand account; and __fish_seen_subcommand_from help" -f -a "login" -d 'Login to the configured server'
+complete -c atuin -n "__fish_atuin_using_subcommand account; and __fish_seen_subcommand_from help" -f -a "register" -d 'Register a new account'
+complete -c atuin -n "__fish_atuin_using_subcommand account; and __fish_seen_subcommand_from help" -f -a "logout" -d 'Log out'
+complete -c atuin -n "__fish_atuin_using_subcommand account; and __fish_seen_subcommand_from help" -f -a "delete" -d 'Delete your account, and all synced data'
+complete -c atuin -n "__fish_atuin_using_subcommand account; and __fish_seen_subcommand_from help" -f -a "change-password" -d 'Change your password'
+complete -c atuin -n "__fish_atuin_using_subcommand account; and __fish_seen_subcommand_from help" -f -a "link" -d 'Link your CLI sync account to your Hub account'
+complete -c atuin -n "__fish_atuin_using_subcommand account; and __fish_seen_subcommand_from help" -f -a "help" -d 'Print this message or the help of the given subcommand(s)'
+complete -c atuin -n "__fish_atuin_using_subcommand kv; and not __fish_seen_subcommand_from set delete get list rebuild help" -s h -l help -d 'Print help'
+complete -c atuin -n "__fish_atuin_using_subcommand kv; and not __fish_seen_subcommand_from set delete get list rebuild help" -f -a "set" -d 'Set a key-value pair'
+complete -c atuin -n "__fish_atuin_using_subcommand kv; and not __fish_seen_subcommand_from set delete get list rebuild help" -f -a "delete" -d 'Delete one or more key-value pairs'
+complete -c atuin -n "__fish_atuin_using_subcommand kv; and not __fish_seen_subcommand_from set delete get list rebuild help" -f -a "get" -d 'Retrieve a saved value'
+complete -c atuin -n "__fish_atuin_using_subcommand kv; and not __fish_seen_subcommand_from set delete get list rebuild help" -f -a "list" -d 'List all keys in a namespace, or in all namespaces'
+complete -c atuin -n "__fish_atuin_using_subcommand kv; and not __fish_seen_subcommand_from set delete get list rebuild help" -f -a "rebuild" -d 'Rebuild the KV store'
+complete -c atuin -n "__fish_atuin_using_subcommand kv; and not __fish_seen_subcommand_from set delete get list rebuild help" -f -a "help" -d 'Print this message or the help of the given subcommand(s)'
+complete -c atuin -n "__fish_atuin_using_subcommand kv; and __fish_seen_subcommand_from set" -s k -l key -d 'Key to set' -r
+complete -c atuin -n "__fish_atuin_using_subcommand kv; and __fish_seen_subcommand_from set" -s n -l namespace -d 'Namespace for the key-value pair' -r
+complete -c atuin -n "__fish_atuin_using_subcommand kv; and __fish_seen_subcommand_from set" -s h -l help -d 'Print help'
+complete -c atuin -n "__fish_atuin_using_subcommand kv; and __fish_seen_subcommand_from delete" -s n -l namespace -d 'Namespace for the key-value pair' -r
+complete -c atuin -n "__fish_atuin_using_subcommand kv; and __fish_seen_subcommand_from delete" -s h -l help -d 'Print help'
+complete -c atuin -n "__fish_atuin_using_subcommand kv; and __fish_seen_subcommand_from get" -s n -l namespace -d 'Namespace for the key-value pair' -r
+complete -c atuin -n "__fish_atuin_using_subcommand kv; and __fish_seen_subcommand_from get" -s h -l help -d 'Print help'
+complete -c atuin -n "__fish_atuin_using_subcommand kv; and __fish_seen_subcommand_from list" -s n -l namespace -d 'Namespace to list keys from' -r
+complete -c atuin -n "__fish_atuin_using_subcommand kv; and __fish_seen_subcommand_from list" -s a -l all-namespaces -d 'List all keys in all namespaces'
+complete -c atuin -n "__fish_atuin_using_subcommand kv; and __fish_seen_subcommand_from list" -s h -l help -d 'Print help'
+complete -c atuin -n "__fish_atuin_using_subcommand kv; and __fish_seen_subcommand_from rebuild" -s h -l help -d 'Print help'
+complete -c atuin -n "__fish_atuin_using_subcommand kv; and __fish_seen_subcommand_from help" -f -a "set" -d 'Set a key-value pair'
+complete -c atuin -n "__fish_atuin_using_subcommand kv; and __fish_seen_subcommand_from help" -f -a "delete" -d 'Delete one or more key-value pairs'
+complete -c atuin -n "__fish_atuin_using_subcommand kv; and __fish_seen_subcommand_from help" -f -a "get" -d 'Retrieve a saved value'
+complete -c atuin -n "__fish_atuin_using_subcommand kv; and __fish_seen_subcommand_from help" -f -a "list" -d 'List all keys in a namespace, or in all namespaces'
+complete -c atuin -n "__fish_atuin_using_subcommand kv; and __fish_seen_subcommand_from help" -f -a "rebuild" -d 'Rebuild the KV store'
+complete -c atuin -n "__fish_atuin_using_subcommand kv; and __fish_seen_subcommand_from help" -f -a "help" -d 'Print this message or the help of the given subcommand(s)'
+complete -c atuin -n "__fish_atuin_using_subcommand store; and not __fish_seen_subcommand_from status rebuild rekey purge verify push pull help" -s h -l help -d 'Print help'
+complete -c atuin -n "__fish_atuin_using_subcommand store; and not __fish_seen_subcommand_from status rebuild rekey purge verify push pull help" -f -a "status" -d 'Print the current status of the record store'
+complete -c atuin -n "__fish_atuin_using_subcommand store; and not __fish_seen_subcommand_from status rebuild rekey purge verify push pull help" -f -a "rebuild" -d 'Rebuild a store (eg atuin store rebuild history)'
+complete -c atuin -n "__fish_atuin_using_subcommand store; and not __fish_seen_subcommand_from status rebuild rekey purge verify push pull help" -f -a "rekey" -d 'Re-encrypt the store with a new key (potential for data loss!)'
+complete -c atuin -n "__fish_atuin_using_subcommand store; and not __fish_seen_subcommand_from status rebuild rekey purge verify push pull help" -f -a "purge" -d 'Delete all records in the store that cannot be decrypted with the current key'
+complete -c atuin -n "__fish_atuin_using_subcommand store; and not __fish_seen_subcommand_from status rebuild rekey purge verify push pull help" -f -a "verify" -d 'Verify that all records in the store can be decrypted with the current key'
+complete -c atuin -n "__fish_atuin_using_subcommand store; and not __fish_seen_subcommand_from status rebuild rekey purge verify push pull help" -f -a "push" -d 'Push all records to the remote sync server (one way sync)'
+complete -c atuin -n "__fish_atuin_using_subcommand store; and not __fish_seen_subcommand_from status rebuild rekey purge verify push pull help" -f -a "pull" -d 'Pull records from the remote sync server (one way sync)'
+complete -c atuin -n "__fish_atuin_using_subcommand store; and not __fish_seen_subcommand_from status rebuild rekey purge verify push pull help" -f -a "help" -d 'Print this message or the help of the given subcommand(s)'
+complete -c atuin -n "__fish_atuin_using_subcommand store; and __fish_seen_subcommand_from status" -s h -l help -d 'Print help'
+complete -c atuin -n "__fish_atuin_using_subcommand store; and __fish_seen_subcommand_from rebuild" -s h -l help -d 'Print help'
+complete -c atuin -n "__fish_atuin_using_subcommand store; and __fish_seen_subcommand_from rekey" -s h -l help -d 'Print help'
+complete -c atuin -n "__fish_atuin_using_subcommand store; and __fish_seen_subcommand_from purge" -s h -l help -d 'Print help'
+complete -c atuin -n "__fish_atuin_using_subcommand store; and __fish_seen_subcommand_from verify" -s h -l help -d 'Print help'
+complete -c atuin -n "__fish_atuin_using_subcommand store; and __fish_seen_subcommand_from push" -s t -l tag -d 'The tag to push (eg, \'history\'). Defaults to all tags' -r
+complete -c atuin -n "__fish_atuin_using_subcommand store; and __fish_seen_subcommand_from push" -l host -d 'The host to push, in the form of a UUID host ID. Defaults to the current host' -r
+complete -c atuin -n "__fish_atuin_using_subcommand store; and __fish_seen_subcommand_from push" -l page -d 'Page Size How many records to upload at once. Defaults to 100' -r
+complete -c atuin -n "__fish_atuin_using_subcommand store; and __fish_seen_subcommand_from push" -l force -d 'Force push records This will override both host and tag, to be all hosts and all tags. First clear the remote store, then upload all of the local store'
+complete -c atuin -n "__fish_atuin_using_subcommand store; and __fish_seen_subcommand_from push" -s h -l help -d 'Print help'
+complete -c atuin -n "__fish_atuin_using_subcommand store; and __fish_seen_subcommand_from pull" -s t -l tag -d 'The tag to push (eg, \'history\'). Defaults to all tags' -r
+complete -c atuin -n "__fish_atuin_using_subcommand store; and __fish_seen_subcommand_from pull" -l page -d 'Page Size How many records to download at once. Defaults to 100' -r
+complete -c atuin -n "__fish_atuin_using_subcommand store; and __fish_seen_subcommand_from pull" -l force -d 'Force push records This will first wipe the local store, and then download all records from the remote'
+complete -c atuin -n "__fish_atuin_using_subcommand store; and __fish_seen_subcommand_from pull" -s h -l help -d 'Print help'
+complete -c atuin -n "__fish_atuin_using_subcommand store; and __fish_seen_subcommand_from help" -f -a "status" -d 'Print the current status of the record store'
+complete -c atuin -n "__fish_atuin_using_subcommand store; and __fish_seen_subcommand_from help" -f -a "rebuild" -d 'Rebuild a store (eg atuin store rebuild history)'
+complete -c atuin -n "__fish_atuin_using_subcommand store; and __fish_seen_subcommand_from help" -f -a "rekey" -d 'Re-encrypt the store with a new key (potential for data loss!)'
+complete -c atuin -n "__fish_atuin_using_subcommand store; and __fish_seen_subcommand_from help" -f -a "purge" -d 'Delete all records in the store that cannot be decrypted with the current key'
+complete -c atuin -n "__fish_atuin_using_subcommand store; and __fish_seen_subcommand_from help" -f -a "verify" -d 'Verify that all records in the store can be decrypted with the current key'
+complete -c atuin -n "__fish_atuin_using_subcommand store; and __fish_seen_subcommand_from help" -f -a "push" -d 'Push all records to the remote sync server (one way sync)'
+complete -c atuin -n "__fish_atuin_using_subcommand store; and __fish_seen_subcommand_from help" -f -a "pull" -d 'Pull records from the remote sync server (one way sync)'
+complete -c atuin -n "__fish_atuin_using_subcommand store; and __fish_seen_subcommand_from help" -f -a "help" -d 'Print this message or the help of the given subcommand(s)'
+complete -c atuin -n "__fish_atuin_using_subcommand dotfiles; and not __fish_seen_subcommand_from alias var help" -s h -l help -d 'Print help'
+complete -c atuin -n "__fish_atuin_using_subcommand dotfiles; and not __fish_seen_subcommand_from alias var help" -f -a "alias" -d 'Manage shell aliases with Atuin'
+complete -c atuin -n "__fish_atuin_using_subcommand dotfiles; and not __fish_seen_subcommand_from alias var help" -f -a "var" -d 'Manage shell and environment variables with Atuin'
+complete -c atuin -n "__fish_atuin_using_subcommand dotfiles; and not __fish_seen_subcommand_from alias var help" -f -a "help" -d 'Print this message or the help of the given subcommand(s)'
+complete -c atuin -n "__fish_atuin_using_subcommand dotfiles; and __fish_seen_subcommand_from alias" -s h -l help -d 'Print help'
+complete -c atuin -n "__fish_atuin_using_subcommand dotfiles; and __fish_seen_subcommand_from alias" -f -a "set" -d 'Set an alias'
+complete -c atuin -n "__fish_atuin_using_subcommand dotfiles; and __fish_seen_subcommand_from alias" -f -a "delete" -d 'Delete an alias'
+complete -c atuin -n "__fish_atuin_using_subcommand dotfiles; and __fish_seen_subcommand_from alias" -f -a "list" -d 'List all aliases'
+complete -c atuin -n "__fish_atuin_using_subcommand dotfiles; and __fish_seen_subcommand_from alias" -f -a "clear" -d 'Delete all aliases'
+complete -c atuin -n "__fish_atuin_using_subcommand dotfiles; and __fish_seen_subcommand_from alias" -f -a "help" -d 'Print this message or the help of the given subcommand(s)'
+complete -c atuin -n "__fish_atuin_using_subcommand dotfiles; and __fish_seen_subcommand_from var" -s h -l help -d 'Print help'
+complete -c atuin -n "__fish_atuin_using_subcommand dotfiles; and __fish_seen_subcommand_from var" -f -a "set" -d 'Set a variable'
+complete -c atuin -n "__fish_atuin_using_subcommand dotfiles; and __fish_seen_subcommand_from var" -f -a "delete" -d 'Delete a variable'
+complete -c atuin -n "__fish_atuin_using_subcommand dotfiles; and __fish_seen_subcommand_from var" -f -a "list" -d 'List all variables'
+complete -c atuin -n "__fish_atuin_using_subcommand dotfiles; and __fish_seen_subcommand_from var" -f -a "help" -d 'Print this message or the help of the given subcommand(s)'
+complete -c atuin -n "__fish_atuin_using_subcommand dotfiles; and __fish_seen_subcommand_from help" -f -a "alias" -d 'Manage shell aliases with Atuin'
+complete -c atuin -n "__fish_atuin_using_subcommand dotfiles; and __fish_seen_subcommand_from help" -f -a "var" -d 'Manage shell and environment variables with Atuin'
+complete -c atuin -n "__fish_atuin_using_subcommand dotfiles; and __fish_seen_subcommand_from help" -f -a "help" -d 'Print this message or the help of the given subcommand(s)'
+complete -c atuin -n "__fish_atuin_using_subcommand scripts; and not __fish_seen_subcommand_from new run list get edit delete help" -s h -l help -d 'Print help'
+complete -c atuin -n "__fish_atuin_using_subcommand scripts; and not __fish_seen_subcommand_from new run list get edit delete help" -f -a "new"
+complete -c atuin -n "__fish_atuin_using_subcommand scripts; and not __fish_seen_subcommand_from new run list get edit delete help" -f -a "run"
+complete -c atuin -n "__fish_atuin_using_subcommand scripts; and not __fish_seen_subcommand_from new run list get edit delete help" -f -a "list"
+complete -c atuin -n "__fish_atuin_using_subcommand scripts; and not __fish_seen_subcommand_from new run list get edit delete help" -f -a "get"
+complete -c atuin -n "__fish_atuin_using_subcommand scripts; and not __fish_seen_subcommand_from new run list get edit delete help" -f -a "edit"
+complete -c atuin -n "__fish_atuin_using_subcommand scripts; and not __fish_seen_subcommand_from new run list get edit delete help" -f -a "delete"
+complete -c atuin -n "__fish_atuin_using_subcommand scripts; and not __fish_seen_subcommand_from new run list get edit delete help" -f -a "help" -d 'Print this message or the help of the given subcommand(s)'
+complete -c atuin -n "__fish_atuin_using_subcommand scripts; and __fish_seen_subcommand_from new" -s d -l description -r
+complete -c atuin -n "__fish_atuin_using_subcommand scripts; and __fish_seen_subcommand_from new" -s t -l tags -r
+complete -c atuin -n "__fish_atuin_using_subcommand scripts; and __fish_seen_subcommand_from new" -s s -l shebang -r
+complete -c atuin -n "__fish_atuin_using_subcommand scripts; and __fish_seen_subcommand_from new" -l script -r -F
+complete -c atuin -n "__fish_atuin_using_subcommand scripts; and __fish_seen_subcommand_from new" -l last -d 'Use the last command as the script content Optionally specify a number to use the last N commands' -r
+complete -c atuin -n "__fish_atuin_using_subcommand scripts; and __fish_seen_subcommand_from new" -l no-edit -d 'Skip opening editor when using --last'
+complete -c atuin -n "__fish_atuin_using_subcommand scripts; and __fish_seen_subcommand_from new" -s h -l help -d 'Print help'
+complete -c atuin -n "__fish_atuin_using_subcommand scripts; and __fish_seen_subcommand_from run" -s v -l var -d 'Specify template variables in the format KEY=VALUE Example: -v name=John -v greeting="Hello there"' -r
+complete -c atuin -n "__fish_atuin_using_subcommand scripts; and __fish_seen_subcommand_from run" -s h -l help -d 'Print help'
+complete -c atuin -n "__fish_atuin_using_subcommand scripts; and __fish_seen_subcommand_from list" -s h -l help -d 'Print help'
+complete -c atuin -n "__fish_atuin_using_subcommand scripts; and __fish_seen_subcommand_from get" -s s -l script -d 'Display only the executable script with shebang'
+complete -c atuin -n "__fish_atuin_using_subcommand scripts; and __fish_seen_subcommand_from get" -s h -l help -d 'Print help'
+complete -c atuin -n "__fish_atuin_using_subcommand scripts; and __fish_seen_subcommand_from edit" -s d -l description -r
+complete -c atuin -n "__fish_atuin_using_subcommand scripts; and __fish_seen_subcommand_from edit" -s t -l tags -d 'Replace all existing tags with these new tags' -r
+complete -c atuin -n "__fish_atuin_using_subcommand scripts; and __fish_seen_subcommand_from edit" -l rename -d 'Rename the script' -r
+complete -c atuin -n "__fish_atuin_using_subcommand scripts; and __fish_seen_subcommand_from edit" -s s -l shebang -r
+complete -c atuin -n "__fish_atuin_using_subcommand scripts; and __fish_seen_subcommand_from edit" -l script -r -F
+complete -c atuin -n "__fish_atuin_using_subcommand scripts; and __fish_seen_subcommand_from edit" -l no-tags -d 'Remove all tags from the script'
+complete -c atuin -n "__fish_atuin_using_subcommand scripts; and __fish_seen_subcommand_from edit" -l no-edit -d 'Skip opening editor'
+complete -c atuin -n "__fish_atuin_using_subcommand scripts; and __fish_seen_subcommand_from edit" -s h -l help -d 'Print help'
+complete -c atuin -n "__fish_atuin_using_subcommand scripts; and __fish_seen_subcommand_from delete" -s f -l force
+complete -c atuin -n "__fish_atuin_using_subcommand scripts; and __fish_seen_subcommand_from delete" -s h -l help -d 'Print help'
+complete -c atuin -n "__fish_atuin_using_subcommand scripts; and __fish_seen_subcommand_from help" -f -a "new"
+complete -c atuin -n "__fish_atuin_using_subcommand scripts; and __fish_seen_subcommand_from help" -f -a "run"
+complete -c atuin -n "__fish_atuin_using_subcommand scripts; and __fish_seen_subcommand_from help" -f -a "list"
+complete -c atuin -n "__fish_atuin_using_subcommand scripts; and __fish_seen_subcommand_from help" -f -a "get"
+complete -c atuin -n "__fish_atuin_using_subcommand scripts; and __fish_seen_subcommand_from help" -f -a "edit"
+complete -c atuin -n "__fish_atuin_using_subcommand scripts; and __fish_seen_subcommand_from help" -f -a "delete"
+complete -c atuin -n "__fish_atuin_using_subcommand scripts; and __fish_seen_subcommand_from help" -f -a "help" -d 'Print this message or the help of the given subcommand(s)'
+complete -c atuin -n "__fish_atuin_using_subcommand init" -l disable-ctrl-r -d 'Disable the binding of CTRL-R to atuin'
+complete -c atuin -n "__fish_atuin_using_subcommand init" -l disable-up-arrow -d 'Disable the binding of the Up Arrow key to atuin'
+complete -c atuin -n "__fish_atuin_using_subcommand init" -l disable-ai -d 'Disable the binding of ? to Atuin AI'
+complete -c atuin -n "__fish_atuin_using_subcommand init" -s h -l help -d 'Print help (see more with \'--help\')'
+complete -c atuin -n "__fish_atuin_using_subcommand info" -s h -l help -d 'Print help'
+complete -c atuin -n "__fish_atuin_using_subcommand doctor" -s h -l help -d 'Print help'
+complete -c atuin -n "__fish_atuin_using_subcommand wrapped" -s h -l help -d 'Print help'
+complete -c atuin -n "__fish_atuin_using_subcommand daemon; and not __fish_seen_subcommand_from start status stop restart help" -l daemonize -d 'Internal flag for daemonization'
+complete -c atuin -n "__fish_atuin_using_subcommand daemon; and not __fish_seen_subcommand_from start status stop restart help" -l show-logs -d 'Also write daemon logs to the console (useful for debugging)'
+complete -c atuin -n "__fish_atuin_using_subcommand daemon; and not __fish_seen_subcommand_from start status stop restart help" -s h -l help -d 'Print help'
+complete -c atuin -n "__fish_atuin_using_subcommand daemon; and not __fish_seen_subcommand_from start status stop restart help" -f -a "start" -d 'Start the daemon server'
+complete -c atuin -n "__fish_atuin_using_subcommand daemon; and not __fish_seen_subcommand_from start status stop restart help" -f -a "status" -d 'Show the daemon\'s current status'
+complete -c atuin -n "__fish_atuin_using_subcommand daemon; and not __fish_seen_subcommand_from start status stop restart help" -f -a "stop" -d 'Stop the daemon gracefully'
+complete -c atuin -n "__fish_atuin_using_subcommand daemon; and not __fish_seen_subcommand_from start status stop restart help" -f -a "restart" -d 'Restart the daemon (stop, then start in background)'
+complete -c atuin -n "__fish_atuin_using_subcommand daemon; and not __fish_seen_subcommand_from start status stop restart help" -f -a "help" -d 'Print this message or the help of the given subcommand(s)'
+complete -c atuin -n "__fish_atuin_using_subcommand daemon; and __fish_seen_subcommand_from start" -l daemonize
+complete -c atuin -n "__fish_atuin_using_subcommand daemon; and __fish_seen_subcommand_from start" -l show-logs -d 'Also write daemon logs to the console (useful for debugging)'
+complete -c atuin -n "__fish_atuin_using_subcommand daemon; and __fish_seen_subcommand_from start" -l force -d 'Force start: kill existing daemon process and reset the socket'
+complete -c atuin -n "__fish_atuin_using_subcommand daemon; and __fish_seen_subcommand_from start" -s h -l help -d 'Print help'
+complete -c atuin -n "__fish_atuin_using_subcommand daemon; and __fish_seen_subcommand_from status" -s h -l help -d 'Print help'
+complete -c atuin -n "__fish_atuin_using_subcommand daemon; and __fish_seen_subcommand_from stop" -s h -l help -d 'Print help'
+complete -c atuin -n "__fish_atuin_using_subcommand daemon; and __fish_seen_subcommand_from restart" -s h -l help -d 'Print help'
+complete -c atuin -n "__fish_atuin_using_subcommand daemon; and __fish_seen_subcommand_from help" -f -a "start" -d 'Start the daemon server'
+complete -c atuin -n "__fish_atuin_using_subcommand daemon; and __fish_seen_subcommand_from help" -f -a "status" -d 'Show the daemon\'s current status'
+complete -c atuin -n "__fish_atuin_using_subcommand daemon; and __fish_seen_subcommand_from help" -f -a "stop" -d 'Stop the daemon gracefully'
+complete -c atuin -n "__fish_atuin_using_subcommand daemon; and __fish_seen_subcommand_from help" -f -a "restart" -d 'Restart the daemon (stop, then start in background)'
+complete -c atuin -n "__fish_atuin_using_subcommand daemon; and __fish_seen_subcommand_from help" -f -a "help" -d 'Print this message or the help of the given subcommand(s)'
+complete -c atuin -n "__fish_atuin_using_subcommand default-config" -s h -l help -d 'Print help'
+complete -c atuin -n "__fish_atuin_using_subcommand config; and not __fish_seen_subcommand_from get set print help" -s h -l help -d 'Print help'
+complete -c atuin -n "__fish_atuin_using_subcommand config; and not __fish_seen_subcommand_from get set print help" -f -a "get" -d 'Get a configuration value from your config.toml file or after defaults and overrides are applied'
+complete -c atuin -n "__fish_atuin_using_subcommand config; and not __fish_seen_subcommand_from get set print help" -f -a "set" -d 'Set a configuration value in your config.toml file'
+complete -c atuin -n "__fish_atuin_using_subcommand config; and not __fish_seen_subcommand_from get set print help" -f -a "print" -d 'Print all configuration values from your config.toml file in TOML format'
+complete -c atuin -n "__fish_atuin_using_subcommand config; and not __fish_seen_subcommand_from get set print help" -f -a "help" -d 'Print this message or the help of the given subcommand(s)'
+complete -c atuin -n "__fish_atuin_using_subcommand config; and __fish_seen_subcommand_from get" -s r -l resolved -d 'Print the value after defaults and overrides are applied'
+complete -c atuin -n "__fish_atuin_using_subcommand config; and __fish_seen_subcommand_from get" -s v -l verbose -d 'Print both the config file value and the resolved value'
+complete -c atuin -n "__fish_atuin_using_subcommand config; and __fish_seen_subcommand_from get" -s h -l help -d 'Print help'
+complete -c atuin -n "__fish_atuin_using_subcommand config; and __fish_seen_subcommand_from set" -s t -l type -d 'Store value as an explicit type' -r -f -a "auto\t'Automatically determine the type of the value'
+string\t'Store value as a string'
+boolean\t'Store value as a boolean'
+integer\t'Store value as an integer'
+float\t'Store the value as a float'"
+complete -c atuin -n "__fish_atuin_using_subcommand config; and __fish_seen_subcommand_from set" -s h -l help -d 'Print help (see more with \'--help\')'
+complete -c atuin -n "__fish_atuin_using_subcommand config; and __fish_seen_subcommand_from print" -s h -l help -d 'Print help (see more with \'--help\')'
+complete -c atuin -n "__fish_atuin_using_subcommand config; and __fish_seen_subcommand_from help" -f -a "get" -d 'Get a configuration value from your config.toml file or after defaults and overrides are applied'
+complete -c atuin -n "__fish_atuin_using_subcommand config; and __fish_seen_subcommand_from help" -f -a "set" -d 'Set a configuration value in your config.toml file'
+complete -c atuin -n "__fish_atuin_using_subcommand config; and __fish_seen_subcommand_from help" -f -a "print" -d 'Print all configuration values from your config.toml file in TOML format'
+complete -c atuin -n "__fish_atuin_using_subcommand config; and __fish_seen_subcommand_from help" -f -a "help" -d 'Print this message or the help of the given subcommand(s)'
+complete -c atuin -n "__fish_atuin_using_subcommand ai; and not __fish_seen_subcommand_from init inline help" -s h -l help -d 'Print help'
+complete -c atuin -n "__fish_atuin_using_subcommand ai; and not __fish_seen_subcommand_from init inline help" -f -a "init" -d 'Initialize shell integration'
+complete -c atuin -n "__fish_atuin_using_subcommand ai; and not __fish_seen_subcommand_from init inline help" -f -a "inline" -d 'Inline completion mode with small TUI overlay'
+complete -c atuin -n "__fish_atuin_using_subcommand ai; and not __fish_seen_subcommand_from init inline help" -f -a "help" -d 'Print this message or the help of the given subcommand(s)'
+complete -c atuin -n "__fish_atuin_using_subcommand ai; and __fish_seen_subcommand_from init" -s h -l help -d 'Print help'
+complete -c atuin -n "__fish_atuin_using_subcommand ai; and __fish_seen_subcommand_from inline" -l api-endpoint -d 'Custom API endpoint; defaults to reading from the `ai.endpoint` setting' -r
+complete -c atuin -n "__fish_atuin_using_subcommand ai; and __fish_seen_subcommand_from inline" -l api-token -d 'Custom API token; defaults to reading from the `ai.api_token` setting' -r
+complete -c atuin -n "__fish_atuin_using_subcommand ai; and __fish_seen_subcommand_from inline" -s v -l verbose -d 'Enable verbose logging'
+complete -c atuin -n "__fish_atuin_using_subcommand ai; and __fish_seen_subcommand_from inline" -l hook -d 'Use the hook mode'
+complete -c atuin -n "__fish_atuin_using_subcommand ai; and __fish_seen_subcommand_from inline" -s h -l help -d 'Print help'
+complete -c atuin -n "__fish_atuin_using_subcommand ai; and __fish_seen_subcommand_from help" -f -a "init" -d 'Initialize shell integration'
+complete -c atuin -n "__fish_atuin_using_subcommand ai; and __fish_seen_subcommand_from help" -f -a "inline" -d 'Inline completion mode with small TUI overlay'
+complete -c atuin -n "__fish_atuin_using_subcommand ai; and __fish_seen_subcommand_from help" -f -a "help" -d 'Print this message or the help of the given subcommand(s)'
+complete -c atuin -n "__fish_atuin_using_subcommand pty-proxy; and not __fish_seen_subcommand_from init help" -s h -l help -d 'Print help'
+complete -c atuin -n "__fish_atuin_using_subcommand pty-proxy; and not __fish_seen_subcommand_from init help" -f -a "init" -d 'Print shell code to initialize atuin pty-proxy on shell startup'
+complete -c atuin -n "__fish_atuin_using_subcommand pty-proxy; and not __fish_seen_subcommand_from init help" -f -a "help" -d 'Print this message or the help of the given subcommand(s)'
+complete -c atuin -n "__fish_atuin_using_subcommand pty-proxy; and __fish_seen_subcommand_from init" -s h -l help -d 'Print help (see more with \'--help\')'
+complete -c atuin -n "__fish_atuin_using_subcommand pty-proxy; and __fish_seen_subcommand_from help" -f -a "init" -d 'Print shell code to initialize atuin pty-proxy on shell startup'
+complete -c atuin -n "__fish_atuin_using_subcommand pty-proxy; and __fish_seen_subcommand_from help" -f -a "help" -d 'Print this message or the help of the given subcommand(s)'
+complete -c atuin -n "__fish_atuin_using_subcommand uuid" -s h -l help -d 'Print help'
+complete -c atuin -n "__fish_atuin_using_subcommand contributors" -s h -l help -d 'Print help'
+complete -c atuin -n "__fish_atuin_using_subcommand gen-completions" -s s -l shell -d 'Set the shell for generating completions' -r -f -a "bash\t''
+elvish\t''
+fish\t''
+nushell\t''
+powershell\t''
+zsh\t''"
+complete -c atuin -n "__fish_atuin_using_subcommand gen-completions" -s o -l out-dir -d 'Set the output directory' -r
+complete -c atuin -n "__fish_atuin_using_subcommand gen-completions" -s h -l help -d 'Print help'
+complete -c atuin -n "__fish_atuin_using_subcommand help; and not __fish_seen_subcommand_from setup history hook import stats search sync login logout register key status account kv store dotfiles scripts init info doctor wrapped daemon default-config config ai pty-proxy uuid contributors gen-completions help" -f -a "setup" -d 'Setup Atuin features'
+complete -c atuin -n "__fish_atuin_using_subcommand help; and not __fish_seen_subcommand_from setup history hook import stats search sync login logout register key status account kv store dotfiles scripts init info doctor wrapped daemon default-config config ai pty-proxy uuid contributors gen-completions help" -f -a "history" -d 'Manipulate shell history'
+complete -c atuin -n "__fish_atuin_using_subcommand help; and not __fish_seen_subcommand_from setup history hook import stats search sync login logout register key status account kv store dotfiles scripts init info doctor wrapped daemon default-config config ai pty-proxy uuid contributors gen-completions help" -f -a "hook" -d 'Manage AI-agent shell hooks'
+complete -c atuin -n "__fish_atuin_using_subcommand help; and not __fish_seen_subcommand_from setup history hook import stats search sync login logout register key status account kv store dotfiles scripts init info doctor wrapped daemon default-config config ai pty-proxy uuid contributors gen-completions help" -f -a "import" -d 'Import shell history from file'
+complete -c atuin -n "__fish_atuin_using_subcommand help; and not __fish_seen_subcommand_from setup history hook import stats search sync login logout register key status account kv store dotfiles scripts init info doctor wrapped daemon default-config config ai pty-proxy uuid contributors gen-completions help" -f -a "stats" -d 'Calculate statistics for your history'
+complete -c atuin -n "__fish_atuin_using_subcommand help; and not __fish_seen_subcommand_from setup history hook import stats search sync login logout register key status account kv store dotfiles scripts init info doctor wrapped daemon default-config config ai pty-proxy uuid contributors gen-completions help" -f -a "search" -d 'Interactive history search'
+complete -c atuin -n "__fish_atuin_using_subcommand help; and not __fish_seen_subcommand_from setup history hook import stats search sync login logout register key status account kv store dotfiles scripts init info doctor wrapped daemon default-config config ai pty-proxy uuid contributors gen-completions help" -f -a "sync" -d 'Sync with the configured server'
+complete -c atuin -n "__fish_atuin_using_subcommand help; and not __fish_seen_subcommand_from setup history hook import stats search sync login logout register key status account kv store dotfiles scripts init info doctor wrapped daemon default-config config ai pty-proxy uuid contributors gen-completions help" -f -a "login" -d 'Login to the configured server'
+complete -c atuin -n "__fish_atuin_using_subcommand help; and not __fish_seen_subcommand_from setup history hook import stats search sync login logout register key status account kv store dotfiles scripts init info doctor wrapped daemon default-config config ai pty-proxy uuid contributors gen-completions help" -f -a "logout" -d 'Log out'
+complete -c atuin -n "__fish_atuin_using_subcommand help; and not __fish_seen_subcommand_from setup history hook import stats search sync login logout register key status account kv store dotfiles scripts init info doctor wrapped daemon default-config config ai pty-proxy uuid contributors gen-completions help" -f -a "register" -d 'Register with the configured server'
+complete -c atuin -n "__fish_atuin_using_subcommand help; and not __fish_seen_subcommand_from setup history hook import stats search sync login logout register key status account kv store dotfiles scripts init info doctor wrapped daemon default-config config ai pty-proxy uuid contributors gen-completions help" -f -a "key" -d 'Print the encryption key for transfer to another machine'
+complete -c atuin -n "__fish_atuin_using_subcommand help; and not __fish_seen_subcommand_from setup history hook import stats search sync login logout register key status account kv store dotfiles scripts init info doctor wrapped daemon default-config config ai pty-proxy uuid contributors gen-completions help" -f -a "status" -d 'Display the sync status'
+complete -c atuin -n "__fish_atuin_using_subcommand help; and not __fish_seen_subcommand_from setup history hook import stats search sync login logout register key status account kv store dotfiles scripts init info doctor wrapped daemon default-config config ai pty-proxy uuid contributors gen-completions help" -f -a "account" -d 'Manage your sync account'
+complete -c atuin -n "__fish_atuin_using_subcommand help; and not __fish_seen_subcommand_from setup history hook import stats search sync login logout register key status account kv store dotfiles scripts init info doctor wrapped daemon default-config config ai pty-proxy uuid contributors gen-completions help" -f -a "kv" -d 'Get or set small key-value pairs'
+complete -c atuin -n "__fish_atuin_using_subcommand help; and not __fish_seen_subcommand_from setup history hook import stats search sync login logout register key status account kv store dotfiles scripts init info doctor wrapped daemon default-config config ai pty-proxy uuid contributors gen-completions help" -f -a "store" -d 'Manage the atuin data store'
+complete -c atuin -n "__fish_atuin_using_subcommand help; and not __fish_seen_subcommand_from setup history hook import stats search sync login logout register key status account kv store dotfiles scripts init info doctor wrapped daemon default-config config ai pty-proxy uuid contributors gen-completions help" -f -a "dotfiles" -d 'Manage your dotfiles with Atuin'
+complete -c atuin -n "__fish_atuin_using_subcommand help; and not __fish_seen_subcommand_from setup history hook import stats search sync login logout register key status account kv store dotfiles scripts init info doctor wrapped daemon default-config config ai pty-proxy uuid contributors gen-completions help" -f -a "scripts" -d 'Manage your scripts with Atuin'
+complete -c atuin -n "__fish_atuin_using_subcommand help; and not __fish_seen_subcommand_from setup history hook import stats search sync login logout register key status account kv store dotfiles scripts init info doctor wrapped daemon default-config config ai pty-proxy uuid contributors gen-completions help" -f -a "init" -d 'Print Atuin\'s shell init script'
+complete -c atuin -n "__fish_atuin_using_subcommand help; and not __fish_seen_subcommand_from setup history hook import stats search sync login logout register key status account kv store dotfiles scripts init info doctor wrapped daemon default-config config ai pty-proxy uuid contributors gen-completions help" -f -a "info" -d 'Information about dotfiles locations and ENV vars'
+complete -c atuin -n "__fish_atuin_using_subcommand help; and not __fish_seen_subcommand_from setup history hook import stats search sync login logout register key status account kv store dotfiles scripts init info doctor wrapped daemon default-config config ai pty-proxy uuid contributors gen-completions help" -f -a "doctor" -d 'Run the doctor to check for common issues'
+complete -c atuin -n "__fish_atuin_using_subcommand help; and not __fish_seen_subcommand_from setup history hook import stats search sync login logout register key status account kv store dotfiles scripts init info doctor wrapped daemon default-config config ai pty-proxy uuid contributors gen-completions help" -f -a "wrapped"
+complete -c atuin -n "__fish_atuin_using_subcommand help; and not __fish_seen_subcommand_from setup history hook import stats search sync login logout register key status account kv store dotfiles scripts init info doctor wrapped daemon default-config config ai pty-proxy uuid contributors gen-completions help" -f -a "daemon" -d '*Experimental* Manage the background daemon'
+complete -c atuin -n "__fish_atuin_using_subcommand help; and not __fish_seen_subcommand_from setup history hook import stats search sync login logout register key status account kv store dotfiles scripts init info doctor wrapped daemon default-config config ai pty-proxy uuid contributors gen-completions help" -f -a "default-config" -d 'Print the default atuin configuration (config.toml)'
+complete -c atuin -n "__fish_atuin_using_subcommand help; and not __fish_seen_subcommand_from setup history hook import stats search sync login logout register key status account kv store dotfiles scripts init info doctor wrapped daemon default-config config ai pty-proxy uuid contributors gen-completions help" -f -a "config"
+complete -c atuin -n "__fish_atuin_using_subcommand help; and not __fish_seen_subcommand_from setup history hook import stats search sync login logout register key status account kv store dotfiles scripts init info doctor wrapped daemon default-config config ai pty-proxy uuid contributors gen-completions help" -f -a "ai" -d 'Run the AI assistant'
+complete -c atuin -n "__fish_atuin_using_subcommand help; and not __fish_seen_subcommand_from setup history hook import stats search sync login logout register key status account kv store dotfiles scripts init info doctor wrapped daemon default-config config ai pty-proxy uuid contributors gen-completions help" -f -a "pty-proxy" -d 'PTY proxy for atuin'
+complete -c atuin -n "__fish_atuin_using_subcommand help; and not __fish_seen_subcommand_from setup history hook import stats search sync login logout register key status account kv store dotfiles scripts init info doctor wrapped daemon default-config config ai pty-proxy uuid contributors gen-completions help" -f -a "uuid" -d 'Generate a UUID'
+complete -c atuin -n "__fish_atuin_using_subcommand help; and not __fish_seen_subcommand_from setup history hook import stats search sync login logout register key status account kv store dotfiles scripts init info doctor wrapped daemon default-config config ai pty-proxy uuid contributors gen-completions help" -f -a "contributors"
+complete -c atuin -n "__fish_atuin_using_subcommand help; and not __fish_seen_subcommand_from setup history hook import stats search sync login logout register key status account kv store dotfiles scripts init info doctor wrapped daemon default-config config ai pty-proxy uuid contributors gen-completions help" -f -a "gen-completions" -d 'Generate shell completions'
+complete -c atuin -n "__fish_atuin_using_subcommand help; and not __fish_seen_subcommand_from setup history hook import stats search sync login logout register key status account kv store dotfiles scripts init info doctor wrapped daemon default-config config ai pty-proxy uuid contributors gen-completions help" -f -a "help" -d 'Print this message or the help of the given subcommand(s)'
+complete -c atuin -n "__fish_atuin_using_subcommand help; and __fish_seen_subcommand_from history" -f -a "start" -d 'Begins a new command in the history'
+complete -c atuin -n "__fish_atuin_using_subcommand help; and __fish_seen_subcommand_from history" -f -a "end" -d 'Finishes a new command in the history (adds time, exit code)'
+complete -c atuin -n "__fish_atuin_using_subcommand help; and __fish_seen_subcommand_from history" -f -a "tail" -d 'Stream history events from the daemon as they are received'
+complete -c atuin -n "__fish_atuin_using_subcommand help; and __fish_seen_subcommand_from history" -f -a "list" -d 'List all items in history'
+complete -c atuin -n "__fish_atuin_using_subcommand help; and __fish_seen_subcommand_from history" -f -a "last" -d 'Get the last command ran'
+complete -c atuin -n "__fish_atuin_using_subcommand help; and __fish_seen_subcommand_from history" -f -a "init-store"
+complete -c atuin -n "__fish_atuin_using_subcommand help; and __fish_seen_subcommand_from history" -f -a "prune" -d 'Delete history entries matching the configured exclusion filters'
+complete -c atuin -n "__fish_atuin_using_subcommand help; and __fish_seen_subcommand_from history" -f -a "dedup" -d 'Delete duplicate history entries (that have the same command, cwd and hostname)'
+complete -c atuin -n "__fish_atuin_using_subcommand help; and __fish_seen_subcommand_from hook" -f -a "install" -d 'Install hooks for an AI agent to capture commands in atuin history'
+complete -c atuin -n "__fish_atuin_using_subcommand help; and __fish_seen_subcommand_from import" -f -a "auto" -d 'Import history for the current shell'
+complete -c atuin -n "__fish_atuin_using_subcommand help; and __fish_seen_subcommand_from import" -f -a "zsh" -d 'Import history from the zsh history file'
+complete -c atuin -n "__fish_atuin_using_subcommand help; and __fish_seen_subcommand_from import" -f -a "zsh-hist-db" -d 'Import history from the zsh history file'
+complete -c atuin -n "__fish_atuin_using_subcommand help; and __fish_seen_subcommand_from import" -f -a "bash" -d 'Import history from the bash history file'
+complete -c atuin -n "__fish_atuin_using_subcommand help; and __fish_seen_subcommand_from import" -f -a "replxx" -d 'Import history from the replxx history file'
+complete -c atuin -n "__fish_atuin_using_subcommand help; and __fish_seen_subcommand_from import" -f -a "resh" -d 'Import history from the resh history file'
+complete -c atuin -n "__fish_atuin_using_subcommand help; and __fish_seen_subcommand_from import" -f -a "fish" -d 'Import history from the fish history file'
+complete -c atuin -n "__fish_atuin_using_subcommand help; and __fish_seen_subcommand_from import" -f -a "nu" -d 'Import history from the nu history file'
+complete -c atuin -n "__fish_atuin_using_subcommand help; and __fish_seen_subcommand_from import" -f -a "nu-hist-db" -d 'Import history from the nu history file'
+complete -c atuin -n "__fish_atuin_using_subcommand help; and __fish_seen_subcommand_from import" -f -a "xonsh" -d 'Import history from xonsh json files'
+complete -c atuin -n "__fish_atuin_using_subcommand help; and __fish_seen_subcommand_from import" -f -a "xonsh-sqlite" -d 'Import history from xonsh sqlite db'
+complete -c atuin -n "__fish_atuin_using_subcommand help; and __fish_seen_subcommand_from import" -f -a "powershell" -d 'Import history from the powershell history file'
+complete -c atuin -n "__fish_atuin_using_subcommand help; and __fish_seen_subcommand_from account" -f -a "login" -d 'Login to the configured server'
+complete -c atuin -n "__fish_atuin_using_subcommand help; and __fish_seen_subcommand_from account" -f -a "register" -d 'Register a new account'
+complete -c atuin -n "__fish_atuin_using_subcommand help; and __fish_seen_subcommand_from account" -f -a "logout" -d 'Log out'
+complete -c atuin -n "__fish_atuin_using_subcommand help; and __fish_seen_subcommand_from account" -f -a "delete" -d 'Delete your account, and all synced data'
+complete -c atuin -n "__fish_atuin_using_subcommand help; and __fish_seen_subcommand_from account" -f -a "change-password" -d 'Change your password'
+complete -c atuin -n "__fish_atuin_using_subcommand help; and __fish_seen_subcommand_from account" -f -a "link" -d 'Link your CLI sync account to your Hub account'
+complete -c atuin -n "__fish_atuin_using_subcommand help; and __fish_seen_subcommand_from kv" -f -a "set" -d 'Set a key-value pair'
+complete -c atuin -n "__fish_atuin_using_subcommand help; and __fish_seen_subcommand_from kv" -f -a "delete" -d 'Delete one or more key-value pairs'
+complete -c atuin -n "__fish_atuin_using_subcommand help; and __fish_seen_subcommand_from kv" -f -a "get" -d 'Retrieve a saved value'
+complete -c atuin -n "__fish_atuin_using_subcommand help; and __fish_seen_subcommand_from kv" -f -a "list" -d 'List all keys in a namespace, or in all namespaces'
+complete -c atuin -n "__fish_atuin_using_subcommand help; and __fish_seen_subcommand_from kv" -f -a "rebuild" -d 'Rebuild the KV store'
+complete -c atuin -n "__fish_atuin_using_subcommand help; and __fish_seen_subcommand_from store" -f -a "status" -d 'Print the current status of the record store'
+complete -c atuin -n "__fish_atuin_using_subcommand help; and __fish_seen_subcommand_from store" -f -a "rebuild" -d 'Rebuild a store (eg atuin store rebuild history)'
+complete -c atuin -n "__fish_atuin_using_subcommand help; and __fish_seen_subcommand_from store" -f -a "rekey" -d 'Re-encrypt the store with a new key (potential for data loss!)'
+complete -c atuin -n "__fish_atuin_using_subcommand help; and __fish_seen_subcommand_from store" -f -a "purge" -d 'Delete all records in the store that cannot be decrypted with the current key'
+complete -c atuin -n "__fish_atuin_using_subcommand help; and __fish_seen_subcommand_from store" -f -a "verify" -d 'Verify that all records in the store can be decrypted with the current key'
+complete -c atuin -n "__fish_atuin_using_subcommand help; and __fish_seen_subcommand_from store" -f -a "push" -d 'Push all records to the remote sync server (one way sync)'
+complete -c atuin -n "__fish_atuin_using_subcommand help; and __fish_seen_subcommand_from store" -f -a "pull" -d 'Pull records from the remote sync server (one way sync)'
+complete -c atuin -n "__fish_atuin_using_subcommand help; and __fish_seen_subcommand_from dotfiles" -f -a "alias" -d 'Manage shell aliases with Atuin'
+complete -c atuin -n "__fish_atuin_using_subcommand help; and __fish_seen_subcommand_from dotfiles" -f -a "var" -d 'Manage shell and environment variables with Atuin'
+complete -c atuin -n "__fish_atuin_using_subcommand help; and __fish_seen_subcommand_from scripts" -f -a "new"
+complete -c atuin -n "__fish_atuin_using_subcommand help; and __fish_seen_subcommand_from scripts" -f -a "run"
+complete -c atuin -n "__fish_atuin_using_subcommand help; and __fish_seen_subcommand_from scripts" -f -a "list"
+complete -c atuin -n "__fish_atuin_using_subcommand help; and __fish_seen_subcommand_from scripts" -f -a "get"
+complete -c atuin -n "__fish_atuin_using_subcommand help; and __fish_seen_subcommand_from scripts" -f -a "edit"
+complete -c atuin -n "__fish_atuin_using_subcommand help; and __fish_seen_subcommand_from scripts" -f -a "delete"
+complete -c atuin -n "__fish_atuin_using_subcommand help; and __fish_seen_subcommand_from daemon" -f -a "start" -d 'Start the daemon server'
+complete -c atuin -n "__fish_atuin_using_subcommand help; and __fish_seen_subcommand_from daemon" -f -a "status" -d 'Show the daemon\'s current status'
+complete -c atuin -n "__fish_atuin_using_subcommand help; and __fish_seen_subcommand_from daemon" -f -a "stop" -d 'Stop the daemon gracefully'
+complete -c atuin -n "__fish_atuin_using_subcommand help; and __fish_seen_subcommand_from daemon" -f -a "restart" -d 'Restart the daemon (stop, then start in background)'
+complete -c atuin -n "__fish_atuin_using_subcommand help; and __fish_seen_subcommand_from config" -f -a "get" -d 'Get a configuration value from your config.toml file or after defaults and overrides are applied'
+complete -c atuin -n "__fish_atuin_using_subcommand help; and __fish_seen_subcommand_from config" -f -a "set" -d 'Set a configuration value in your config.toml file'
+complete -c atuin -n "__fish_atuin_using_subcommand help; and __fish_seen_subcommand_from config" -f -a "print" -d 'Print all configuration values from your config.toml file in TOML format'
+complete -c atuin -n "__fish_atuin_using_subcommand help; and __fish_seen_subcommand_from ai" -f -a "init" -d 'Initialize shell integration'
+complete -c atuin -n "__fish_atuin_using_subcommand help; and __fish_seen_subcommand_from ai" -f -a "inline" -d 'Inline completion mode with small TUI overlay'
+complete -c atuin -n "__fish_atuin_using_subcommand help; and __fish_seen_subcommand_from pty-proxy" -f -a "init" -d 'Print shell code to initialize atuin pty-proxy on shell startup'

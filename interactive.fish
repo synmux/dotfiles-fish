@@ -61,11 +61,11 @@ pieces completion fish | source
 source ~/.orbstack/shell/init2.fish 2>/dev/null
 orbctl completion fish | source
 
+# atuin ai
+source ~/.config/fish/atuin-ai.fish
+
 # opencode
 fish_add_path /Users/dave/.opencode/bin
-
-# kiro
-string match -q "$TERM_PROGRAM" "kiro" and . (kiro --locate-shell-integration-path fish)
 
 # homebrew commmand-not-found handler
 set HOMEBREW_COMMAND_NOT_FOUND_HANDLER (brew --repository)/Library/Homebrew/command-not-found/handler.fish
