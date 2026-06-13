@@ -58,11 +58,10 @@ navi widget fish | source
 pieces completion fish | source
 
 # orb stack
-source ~/.orbstack/shell/init2.fish 2>/dev/null
-orbctl completion fish | source
+source ~/.orbstack/shell/init2.fish 2>/dev/null || :
 
-# atuin ai
-source ~/.config/fish/atuin-ai.fish
+# atuin (+ question mark AI)
+source ~/.config/fish/atuin.fish
 
 # opencode
 fish_add_path /Users/dave/.opencode/bin
