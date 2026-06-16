@@ -5,14 +5,12 @@ gazorby/fish-abbreviation-tips
 gazorby/fish-git-emojis
 jorgebucaran/replay.fish
 jorgebucaran/spark.fish
-joseluisq/gitnow
+joseluisq/gitnow@2.13.0
 laughedelic/pisces
 meaningful-ooo/sponge
 nickeb96/puffer-fish
 oh-my-fish/plugin-bang-bang
 oh-my-fish/plugin-foreign-env
 oh-my-fish/plugin-osx
-qiuxiang/flutter-fish-completions
-rose-pine/fish
 wfxr/forgit
 schuldkroete/ollama-fish-completion
