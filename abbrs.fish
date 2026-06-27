@@ -12,7 +12,7 @@ abbr -a bad 'bundle add --group development'
 abbr -a bb 'bun run build'
 abbr -a be 'bundle exec'
 abbr -a bi 'bundle init'
-abbr -a bl 'bun run lint'
+abbr -a bl 'open -a Bloom.app'
 abbr -a br brew
 abbr -a brana 'brew analytics'
 abbr -a brcat 'brew cat'
