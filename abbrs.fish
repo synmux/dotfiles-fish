@@ -157,15 +157,18 @@ abbr -a md 'GITHUB_TOKEN=$__GITHUB_TOKEN mise dev'
 abbr -a me 'open -a MarkEdit'
 abbr -a mi 'GITHUB_TOKEN=$__GITHUB_TOKEN mise i'
 abbr -a mise 'GITHUB_TOKEN=$__GITHUB_TOKEN mise'
-abbr -a mk minikube
+abbr -a mk 'minikube'
 abbr -a mkd 'mkdir -p'
 abbr -a ml 'GITHUB_TOKEN=$__GITHUB_TOKEN mise list'
 abbr -a mout 'GITHUB_TOKEN=$__GITHUB_TOKEN mise outdated'
-abbr -a mp mprocs
+abbr -a mp 'mprocs'
 abbr -a mpr 'GITHUB_TOKEN=$__GITHUB_TOKEN mise prune'
 abbr -a mtr 'GITHUB_TOKEN=$__GITHUB_TOKEN mise trust'
-abbr -a mu multipass
-abbr -a mup 'github-auth && mise upgrade'
+abbr -a mu 'multipass'
+abbr -a mul 'multipass launch --bridged --name primary daily:resolute'
+abbr -a mun 'multipass set local.bridged-network=en7'
+abbr -a mush 'multipass shell'
+abbr -a mup 'GITHUB_TOKEN=$__GITHUB_TOKEN mise upgrade'
 abbr -a muse 'GITHUB_TOKEN=$__GITHUB_TOKEN mise use'
 abbr -a n nerdctl
 abbr -a nas 'command ssh nas'
@@ -219,7 +222,7 @@ abbr -a tu 'trunk upgrade'
 abbr -a tw gittower
 abbr -a ty 'open -a Typora'
 abbr -a u upctl
-abbr -a up 'github-auth && sudo chown -R dave:staff /opt/homebrew && topgrade && mise upgrade'
+abbr -a up 'sudo chown -R dave:staff /opt/homebrew && GITHUB_TOKEN=$__GITHUB_TOKEN topgrade && GITHUB_TOKEN=$__GITHUB_TOKEN mise upgrade'
 abbr -a v vue
 abbr -a venv 'python -m venv'
 abbr -a vi nvim
