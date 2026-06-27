@@ -148,24 +148,25 @@ abbr -a lics 'cd $LICS'
 abbr -a loop 'adb -s adb-GNFMGBD3PAA000011-FVqS8U._adb-tls-connect._tcp'
 abbr -a loop-local 'adb -s GNFMGBD3PAA000011'
 abbr -a ls 'eza --icons=always --hyperlink --git --git-repos --group-directories-first -O'
-abbr -a m mise
+abbr -a m 'GITHUB_TOKEN=$__GITHUB_TOKEN mise'
 abbr -a ma 'open -a Marked'
 abbr -a marked 'open -a Marked'
 abbr -a marksafe 'xattr -d com.apple.quarantine'
 abbr -a mcsv 'open -a Modern\ CSV'
-abbr -a md 'mise dev'
+abbr -a md 'GITHUB_TOKEN=$__GITHUB_TOKEN mise dev'
 abbr -a me 'open -a MarkEdit'
-abbr -a mi 'mise i'
+abbr -a mi 'GITHUB_TOKEN=$__GITHUB_TOKEN mise i'
+abbr -a mise 'GITHUB_TOKEN=$__GITHUB_TOKEN mise'
 abbr -a mk minikube
 abbr -a mkd 'mkdir -p'
-abbr -a ml 'mise list'
-abbr -a mout 'mise outdated'
+abbr -a ml 'GITHUB_TOKEN=$__GITHUB_TOKEN mise list'
+abbr -a mout 'GITHUB_TOKEN=$__GITHUB_TOKEN mise outdated'
 abbr -a mp mprocs
-abbr -a mpr 'mise prune'
-abbr -a mtr 'mise trust'
+abbr -a mpr 'GITHUB_TOKEN=$__GITHUB_TOKEN mise prune'
+abbr -a mtr 'GITHUB_TOKEN=$__GITHUB_TOKEN mise trust'
 abbr -a mu multipass
 abbr -a mup 'github-auth && mise upgrade'
-abbr -a muse 'mise use'
+abbr -a muse 'GITHUB_TOKEN=$__GITHUB_TOKEN mise use'
 abbr -a n nerdctl
 abbr -a nas 'command ssh nas'
 abbr -a o orbctl
