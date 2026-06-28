@@ -11,3 +11,7 @@ if status is-interactive
 end
 
 source $HOME/.config/fish/final.fish
+
+# Added by LM Studio CLI (lms)
+set -gx PATH $PATH /Users/syn/.lmstudio/bin
+# End of LM Studio CLI section
