@@ -6,6 +6,7 @@ abbr -a a aerospace
 abbr -a a2 'aria2c -x8 -s8'
 abbr -a ae 'age --encrypt --armor --recipients-file ~/.age/recipients'
 abbr -a ag agy
+abbr -a aic 'aic2 -as'
 abbr -a b bunnylol
 abbr -a ba 'bundle add'
 abbr -a bad 'bundle add --group development'
@@ -143,6 +144,7 @@ abbr -a kn1 'ssh -p212 dave@10.23.23.100'
 abbr -a kn1j 'ssh -J dave@10.0.101.10:212 dave@10.23.23.100'
 abbr -a kpf 'kubectl port-forward'
 abbr -a l linkerd
+abbr -a lg lazygit
 abbr -a lic 'licenser -n "Dave Williams" -e "dave@dave.io" -l mit'
 abbr -a lics 'cd $LICS'
 abbr -a loop 'adb -s adb-GNFMGBD3PAA000011-FVqS8U._adb-tls-connect._tcp'
@@ -175,7 +177,7 @@ abbr -a nas 'command ssh nas'
 abbr -a o orbctl
 abbr -a oco 'oco --fgm --yes'
 abbr -a omp oh-my-posh
-abbr -a p 'git add -A . && oco --fgm --yes'
+abbr -a p 'git add -A . && aic2 -as'
 abbr -a pf 'open -a "Path Finder"'
 abbr -a pg 'pgrep -lf'
 abbr -a ping gping
@@ -188,7 +190,7 @@ abbr -a pne 'pnpm exec'
 abbr -a pni 'pnpm install'
 abbr -a pnr 'pnpm run'
 abbr -a pnx 'pnpm dlx'
-abbr -a pp 'git add -A . && oco --fgm --yes && push'
+abbr -a pp 'git add -A . && aic2 -as && push'
 abbr -a pping 'prettyping --nolegend'
 abbr -a pr 'gh pr create --fill-verbose'
 abbr -a pu pulumi
