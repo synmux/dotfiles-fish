@@ -177,7 +177,7 @@ abbr -a nas 'command ssh nas'
 abbr -a o orbctl
 abbr -a oco 'oco --fgm --yes'
 abbr -a omp oh-my-posh
-abbr -a p 'git add -A . && aic2 -as'
+abbr -a p 'git add -A . && oco --fgm --yes'
 abbr -a pf 'open -a "Path Finder"'
 abbr -a pg 'pgrep -lf'
 abbr -a ping gping
@@ -190,7 +190,7 @@ abbr -a pne 'pnpm exec'
 abbr -a pni 'pnpm install'
 abbr -a pnr 'pnpm run'
 abbr -a pnx 'pnpm dlx'
-abbr -a pp 'git add -A . && aic2 -as && push'
+abbr -a pp 'git add -A . && oco --fgm --yes && push'
 abbr -a pping 'prettyping --nolegend'
 abbr -a pr 'gh pr create --fill-verbose'
 abbr -a pu pulumi
