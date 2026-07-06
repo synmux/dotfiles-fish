@@ -176,7 +176,6 @@ abbr -a n nerdctl
 abbr -a nas 'command ssh nas'
 abbr -a o orbctl
 abbr -a oco 'oco --fgm --yes'
-abbr -a omp oh-my-posh
 abbr -a p 'cco -ay'
 abbr -a pf 'open -a "Path Finder"'
 abbr -a pg 'pgrep -lf'
