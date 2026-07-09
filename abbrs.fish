@@ -112,6 +112,7 @@ abbr -a drmi 'docker rmi'
 abbr -a ef '$EDITOR ~/.config/fish'
 abbr -a fl 'open -a ForkLift'
 abbr -a fp 'git fetch --all --prune --tags --prune-tags --recurse-submodules=yes && git pull --all --prune --rebase'
+abbr -a fr 'open -a Ferrite.app'
 abbr -a g ghostty
 abbr -a ga 'git aa'
 abbr -a gaa 'git aa'
