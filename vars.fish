@@ -45,3 +45,4 @@ set -gx TAILSCALE_IPV6 (tailscale ip -6)
 set -gx THEFUCK_OVERRIDDEN_ALIASES br,d,dc,g,h,k,l,m,s,vi,vim
 set -gx UPLOADTHING_TOKEN $UPLOADTHING_API_KEY
 set -gx VIRTUAL_ENV_DISABLE_PROMPT true
+set -gx XDG_CONFIG_HOME $HOME/.config
