@@ -14,6 +14,7 @@ set -gx FPR 065602DAF36C71E6AB3A8D7014E5DFDDDAF9DBBF
 set -gx GOOGLE_CLOUD_PROJECT sl1p-production
 set -gx HOMEBREW_BUNDLE_DUMP_NO_VSCODE 1
 set -gx HOMEBREW_DISPLAY_INSTALL_TIMES 1
+set -gx HOMEBREW_NO_ASK 1
 set -gx HORDE_USERNAME daveio
 set -gx MCP_TIMEOUT 31556952 # 1 year, should be enough for MA Sequential Thinking. Affects Claude Code.
 set -gx META_MCP_API_KEY $METAMCP_API_KEY
