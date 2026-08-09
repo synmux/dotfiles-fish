@@ -11,7 +11,12 @@ mise activate fish | source
 # oh-my-posh init fish --config ~/.config/oh-my-posh.yaml | source
 
 # starship
-starship init fish | source
+if not set -q WARP_SESSION_ID
+  starship init fish | source
+else
+    functions -e fish_prompt fish_right_prompt
+    function fish_prompt; echo -n '> '; end
+end
 
 # zoxide
 zoxide init fish | source
