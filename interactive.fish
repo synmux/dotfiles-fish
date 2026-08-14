@@ -15,6 +15,11 @@ else
     function fish_prompt; echo -n '> '; end
 end
 
+# terminal-widget
+function terminal-widget
+  '/Applications/TerminalWidget.app/Contents/MacOS/TerminalWidget' $argv
+end
+
 # zoxide
 zoxide init fish | source
 
