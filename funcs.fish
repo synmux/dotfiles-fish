@@ -512,7 +512,7 @@ function findreplace --description "Find and replace text in files"
     echo "🧑🏻‍🎤 Find and replace complete"
 end
 
-function ai --description "AI assistant for generating shell commands"
+function ai-fish --description "AI assistant for generating shell commands"
     argparse x/execute f/force -- $argv
     or return 1
 
