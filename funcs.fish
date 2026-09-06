@@ -809,3 +809,39 @@ function deps --description "Update dependencies based on project files"
         uv lock -U
     end
 end
+
+function backup-key --description "Backup GnuPG key. The FPR env variable must be set to the key fingerprint."
+    if test -z "$FPR"
+        echo "Error: No GnuPG key fingerprint found in \$FPR"
+        return 1
+    end
+    # get last 16 chars of $FPR
+    set -l short_fpr (string sub -s -16 $FPR)
+    set -l backup_stub "$short_fpr-"(date +%Y%m%d%H%M%S)
+    set -l public_file "$backup_stub-public.asc"
+    set -l secret_file "$backup_stub-secret.asc"
+    set -l subkeys_file "$backup_stub-subkeys.asc"
+    set -l ssh_file "$backup_stub-ssh.asc"
+    set -l revoke_file "$backup_stub-revoke.asc"
+    gpg --export-secret-keys --armor > "$secret_file"
+    gpg --export-secret-subkeys --armor > "$subkeys_file"
+    gpg --export-ssh-key > "$ssh_file"
+    gpg --export --armor > "$public_file"
+    gpg --gen-revoke $FPR > "$revoke_file"
+    if test $status -eq 0
+        echo
+        echo
+        echo "GnuPG keys backed up."
+        echo
+        echo " Public key: $public_file"
+        echo " Secret key: $secret_file"
+        echo "    Subkeys: $subkeys_file"
+        echo "    SSH key: $ssh_file"
+        echo "Revoke cert: $revoke_file"
+        echo
+        echo "These are sensitive files! Take care to store them securely."
+    else
+        echo "Error: Failed to backup GnuPG key"
+        return 1
+    end
+end
