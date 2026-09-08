@@ -418,7 +418,9 @@ end
 function edit --description "Smart editor selection"
     if test (count $argv) -eq 0
         # Open current directory
-        if command -q code
+        if set -q OTTY_SHELL_INTEGRATION
+            otty edit .
+        else if command -q code
             code .
         else if command -q zed
             zed .
@@ -427,7 +429,9 @@ function edit --description "Smart editor selection"
         end
     else
         # Open specific files
-        if command -q code
+        if set -q OTTY_SHELL_INTEGRATION
+            otty edit $argv
+        else if command -q code
             code $argv
         else if command -q zed
             zed $argv
@@ -844,4 +848,11 @@ function backup-key --description "Backup GnuPG key. The FPR env variable must b
         echo "Error: Failed to backup GnuPG key"
         return 1
     end
+end
+
+function bmpull -d "Pull Markdown from Basic Memory"
+    bm cloud pull --name dev
+    bm cloud pull --name main
+    bm cloud pull --name ops
+    open /Applications/Obsidian.app
 end
