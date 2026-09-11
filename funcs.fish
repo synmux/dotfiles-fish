@@ -854,5 +854,4 @@ function bmpull -d "Pull Markdown from Basic Memory"
     bm cloud pull --name dev
     bm cloud pull --name main
     bm cloud pull --name ops
-    open /Applications/Obsidian.app
 end
