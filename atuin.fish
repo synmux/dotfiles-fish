@@ -5,9 +5,24 @@ if not set -q ATUIN_SESSION; or test "$ATUIN_SHLVL" != "$SHLVL"
 end
 set --erase ATUIN_HISTORY_ID
 
+function _atuin_osc133_command_executed
+    set -q ATUIN_PTY_PROXY_ACTIVE; or return
+    test -n "$ATUIN_HISTORY_ID"; or return
+
+    printf '\033]133;C\a'
+end
+
+function _atuin_osc133_command_finished --argument-names exit_code
+    set -q ATUIN_PTY_PROXY_ACTIVE; or return
+    test -n "$ATUIN_HISTORY_ID"; or return
+
+    printf '\033]133;D;%s;history_id=%s;session_id=%s\a' "$exit_code" "$ATUIN_HISTORY_ID" "$ATUIN_SESSION"
+end
+
 function _atuin_preexec --on-event fish_preexec
     if not test -n "$fish_private_mode"
-        set -g ATUIN_HISTORY_ID (atuin history start -- "$argv[1]" 2>/dev/null)
+        set -g ATUIN_HISTORY_ID (ATUIN_SHELL=fish atuin history start --hook -- "$argv[1]" 2>/dev/null)
+        _atuin_osc133_command_executed
     end
 end
 
@@ -15,7 +30,8 @@ function _atuin_postexec --on-event fish_postexec
     set -l s $status
 
     if test -n "$ATUIN_HISTORY_ID"
-        ATUIN_LOG=error atuin history end --exit $s -- $ATUIN_HISTORY_ID &>/dev/null &
+        _atuin_osc133_command_finished $s
+        atuin history end --hook --exit $s -- $ATUIN_HISTORY_ID &>/dev/null &
         disown
     end
 
@@ -82,11 +98,13 @@ function _atuin_search
     set -l use_tmux_popup (_atuin_tmux_popup_check)
 
     set -l ATUIN_H
+    set -l ATUIN_STATUS 0
     if test "$use_tmux_popup" -eq 1
         set -l tmpdir (mktemp -d)
         if not test -d "$tmpdir"
             # if mktemp got errors
-            set ATUIN_H (ATUIN_SHELL=fish ATUIN_LOG=error ATUIN_QUERY=(commandline -b) atuin search --keymap-mode=$keymap_mode $argv -i 3>&1 1>&2 2>&3 | string collect)
+            set ATUIN_H (ATUIN_SHELL=fish ATUIN_QUERY=(commandline -b) atuin search --keymap-mode=$keymap_mode $argv -i 3>&1 1>&2 2>&3 3>&- | string collect)
+            set ATUIN_STATUS $pipestatus[1]
         else
             set -l result_file "$tmpdir/result"
 
@@ -102,7 +120,8 @@ function _atuin_search
             set -l popup_width (test -n "$ATUIN_TMUX_POPUP_WIDTH" && echo "$ATUIN_TMUX_POPUP_WIDTH" || echo "80%")
             set -l popup_height (test -n "$ATUIN_TMUX_POPUP_HEIGHT" && echo "$ATUIN_TMUX_POPUP_HEIGHT" || echo "60%")
             tmux display-popup -d "$cdir" -w "$popup_width" -h "$popup_height" -E -E -- \
-                sh -c "PATH='$PATH' ATUIN_SESSION='$ATUIN_SESSION' ATUIN_SHELL=fish ATUIN_LOG=error ATUIN_QUERY='$query' atuin search --keymap-mode=$keymap_mode$escaped_args -i 2>'$result_file'"
+                sh -c "PATH='$PATH' ATUIN_SESSION='$ATUIN_SESSION' ATUIN_SHELL=fish ATUIN_QUERY='$query' atuin search --keymap-mode=$keymap_mode$escaped_args -i 2>'$result_file'"
+            set ATUIN_STATUS $status
 
             if test -f "$result_file"
                 set ATUIN_H (cat "$result_file" | string collect)
@@ -114,7 +133,14 @@ function _atuin_search
         # In fish 3.4 and above we can use `"$(some command)"` to keep multiple lines separate;
         # but to support fish 3.3 we need to use `(some command | string collect)`.
         # https://fishshell.com/docs/current/relnotes.html#id24 (fish 3.4 "Notable improvements and fixes")
-        set ATUIN_H (ATUIN_SHELL=fish ATUIN_LOG=error ATUIN_QUERY=(commandline -b) atuin search --keymap-mode=$keymap_mode $argv -i 3>&1 1>&2 2>&3 | string collect)
+        set ATUIN_H (ATUIN_SHELL=fish ATUIN_QUERY=(commandline -b) atuin search --keymap-mode=$keymap_mode $argv -i 3>&1 1>&2 2>&3 3>&- | string collect)
+        set ATUIN_STATUS $pipestatus[1]
+    end
+
+    if test "$ATUIN_STATUS" -ne 0
+        test -n "$ATUIN_H"; and printf '%s\n' "$ATUIN_H" >&2
+        commandline -f repaint
+        return "$ATUIN_STATUS"
     end
 
     set ATUIN_H (string trim -- $ATUIN_H | string collect) # trim whitespace
@@ -152,6 +178,8 @@ function _atuin_bind_up
     end
 end
 
+ATUIN_SHELL=fish atuin __internal prepare-search-index &>/dev/null &
+disown 2>/dev/null
 if string match -q '4.*' $version
     bind ctrl-r _atuin_search
     bind up _atuin_bind_up
@@ -174,6 +202,11 @@ function _atuin_ai_question_mark
     # If buffer is empty or just contains '?', trigger natural language mode
     if test -z "$buf" -o "$buf" = "?"
         commandline -r ""
+
+        # Close the semantic prompt zone (OSC 133 C) so terminals with
+        # shell integration don't erase the TUI's output during their
+        # resize-time prompt reflow.
+        printf '\033]133;C\007' > /dev/tty
 
         # Run atuin ai inline, swapping stdout and stderr
         set -l output (atuin ai inline --hook 3>&1 1>&2 2>&3 | string collect)
