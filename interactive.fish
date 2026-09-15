@@ -67,9 +67,6 @@ pieces completion fish | source
 # orb stack
 source ~/.orbstack/shell/init2.fish 2>/dev/null || :
 
-# atuin (+ question mark AI)
-source ~/.config/fish/atuin.fish
-
 # opencode
 fish_add_path /Users/dave/.opencode/bin
 
