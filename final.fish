@@ -20,3 +20,10 @@ end
 fish_add_path $HOME/.lmstudio/bin
 fish_add_path $HOME/.codeium/windsurf/bin
 fish_add_path $HOME/.opencode/bin
+fish_add_path $HOME/.miyo/bin
+
+# a bit of function meddling
+if functions --query tag
+    functions --copy tag gtag
+    functions --erase tag
+end
