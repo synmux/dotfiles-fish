@@ -849,9 +849,3 @@ function backup-key --description "Backup GnuPG key. The FPR env variable must b
         return 1
     end
 end
-
-function bmpull -d "Pull Markdown from Basic Memory"
-    bm cloud pull --name dev
-    bm cloud pull --name main
-    bm cloud pull --name ops
-end

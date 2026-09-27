@@ -14,6 +14,9 @@ abbr -a bb 'bun run build'
 abbr -a be 'bundle exec'
 abbr -a bi 'bundle init'
 abbr -a bl 'open -a Bloom.app'
+abbr -a bmc 'bm cloud'
+abbr -a bmcy 'bm cloud pull --name main --on-conflict keep-cloud && rm ~/Obsidian/syn@syn.as/Memory/index.md ~/Obsidian/syn@syn.as/Memory/log.md'
+abbr -a bmcs 'bm cloud push --name main --on-conflict keep-local'
 abbr -a br brew
 abbr -a brana 'brew analytics'
 abbr -a brcat 'brew cat'
@@ -236,5 +239,5 @@ abbr -a vi nvim
 abbr -a vim nvim
 abbr -a vue 'pnpm run vue'
 abbr -a w wrangler
-abbr -a y 'yt-dlp --cookies-from-browser chrome --remux-video mp4'
+abbr -a y 'yt-dlp --cookies-from-browser chrome --recode-video mkv'
 abbr -a zj zellij
