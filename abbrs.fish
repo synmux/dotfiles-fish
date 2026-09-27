@@ -93,6 +93,7 @@ abbr -a cmm 'cleanmymac'
 abbr -a cmp 'chezmoi apply'
 abbr -a cmr 'chezmoi re-add'
 abbr -a cmu 'chezmoi update'
+abbr -a codex '/opt/homebrew/bin/codex'
 abbr -a cr 'cargo run'
 abbr -a cs 'codesign --force --sign "Developer ID Application: David Williams"'
 abbr -a cu cursor
