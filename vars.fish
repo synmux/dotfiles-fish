@@ -37,7 +37,6 @@ set -gx __SEMGREP_API_KEY $__SEMGREP_APP_TOKEN
 set -gx SERVERLESS_FRAMEWORK_FORCE_UPDATE true
 set -gx SHOW_ITERM2_WARNING false
 set -gx SLACK_TEAM_ID T03RUU56D
-set -gx SLASH_COMMAND_TOOL_CHAR_BUDGET 32000 # claude code. 3x default we think
 set -gx SRC $HOME/src/github.com/synmux
 set -gx SRCHOME $SRC/github.com/daveio
 set -gx TAILSCALE_IPV4 (tailscale ip -4)
