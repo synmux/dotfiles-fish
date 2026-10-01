@@ -15,6 +15,9 @@ else
     function fish_prompt; echo -n '> '; end
 end
 
+# gcloud
+source /opt/homebrew/share/google-cloud-sdk/path.fish.inc
+
 # terminal-widget
 function terminal-widget
   '/Applications/TerminalWidget.app/Contents/MacOS/TerminalWidget' $argv

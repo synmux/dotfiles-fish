@@ -16,6 +16,9 @@ function mise --wraps="mise" -d "Wrapper for mise that blocks 'mise implode'"
     command mise $argv
 end
 
+# gcloud
+source /opt/homebrew/share/google-cloud-sdk/path.fish.inc
+
 # Additional PATH additions
 fish_add_path $HOME/.lmstudio/bin
 fish_add_path $HOME/.codeium/windsurf/bin
