@@ -82,6 +82,7 @@ abbr -a bunr 'bun run'
 abbr -a c cargo
 abbr -a cf 'cd $HOME/.config/fish'
 abbr -a ci 'cargo install'
+abbr -a cio 'composio'
 abbr -a cl claude
 abbr -a cm chezmoi
 abbr -a cme 'chezmoi edit'
