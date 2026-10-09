@@ -80,7 +80,6 @@ abbr -a bund 'bun dev'
 abbr -a buni 'bun install'
 abbr -a bunr 'bun run'
 abbr -a c cargo
-abbr -a cf 'cd $HOME/.config/fish'
 abbr -a ci 'cargo install'
 abbr -a cio 'composio'
 abbr -a cl claude
@@ -149,6 +148,7 @@ abbr -a kg 'kubectl get'
 abbr -a kgp 'kubectl get pod'
 abbr -a kn1 'ssh -p212 dave@10.23.23.100'
 abbr -a kn1j 'ssh -J dave@10.0.101.10:212 dave@10.23.23.100'
+abbr -a kp 'keepassxc-cli'
 abbr -a kpf 'kubectl port-forward'
 abbr -a l linkerd
 abbr -a lg lazygit

@@ -12,12 +12,14 @@ set -gx DISABLE_ZELLIJ true
 set -gx __DOMAINR_API_KEY $__RAPIDAPI_API_KEY
 set -gx EDITOR "zed --wait"
 set -gx FPR 8EA4E68124FEA8B559F482A2943E9700DECFC535
+set -gx GHIDRA_INSTALL_DIR "$HOME/.local/ghidra"
 set -gx GOOGLE_CLOUD_PROJECT sl1p-production
 set -gx HOMEBREW_BUNDLE_DUMP_NO_VSCODE 1
 set -gx HOMEBREW_DISPLAY_INSTALL_TIMES 1
 set -gx HOMEBREW_NO_ASK 1
 set -gx HORDE_USERNAME daveio
 set -gx __JEV_API_KEY $__TYPESAFE_API_KEY
+set -gx JAVA_HOME "/Library/Java/JavaVirtualMachines/graalvm-21.jdk/Contents/Home/"
 set -gx MCP_TIMEOUT 31556952 # 1 year, should be enough for MA Sequential Thinking. Affects Claude Code.
 set -gx MONO_GAC_PREFIX /opt/homebrew
 set -gx NAS_OPENSTACK_ENDPOINT "https://nas.oryx-hake.ts.net:8443/auth/v1.0"
