@@ -20,8 +20,11 @@ source /opt/homebrew/share/google-cloud-sdk/path.fish.inc
 
 # terminal-widget
 function terminal-widget
-  '/Applications/TerminalWidget.app/Contents/MacOS/TerminalWidget' $argv
+  /Applications/TerminalWidget.app/Contents/MacOS/TerminalWidget $argv
 end
+
+# rea
+rea completions fish | source
 
 # zoxide
 zoxide init fish | source
