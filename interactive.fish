@@ -67,9 +67,6 @@ complete -c gsutil -f -a '(__fish_argcomplete_complete gsutil)'
 # navi
 navi widget fish | source
 
-# pieces
-pieces completion fish | source
-
 # orb stack
 source ~/.orbstack/shell/init2.fish 2>/dev/null || :
 
