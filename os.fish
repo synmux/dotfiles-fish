@@ -2,7 +2,7 @@
 
 
     # macOS
-    /opt/homebrew/bin/brew shellenv | source
+    /opt/homebrew/bin/brew shellenv fish | source
     function mw --wraps mise -a command args -d "Run mise ensuring dependencies and flags"
         for i in gettext libdeflate pcre2 pkgconf tcl-tk xz
             if not brew list $i >/dev/null 2>&1
