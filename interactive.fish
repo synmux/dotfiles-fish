@@ -23,6 +23,9 @@ function terminal-widget
   /Applications/TerminalWidget.app/Contents/MacOS/TerminalWidget $argv
 end
 
+# lowfat
+lowfat shell-init fish | source
+
 # rea
 rea completions fish | source
 
