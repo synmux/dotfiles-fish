@@ -158,12 +158,9 @@ abbr -a loop 'adb -s adb-GNFMGBD3PAA000011-FVqS8U._adb-tls-connect._tcp'
 abbr -a loop-local 'adb -s GNFMGBD3PAA000011'
 abbr -a ls 'eza --icons=always --hyperlink --git --git-repos --group-directories-first -O'
 abbr -a m 'open -a MarkViewer'
-abbr -a ma 'open -a Marked'
-abbr -a marked 'open -a Marked'
 abbr -a marksafe 'xattr -d com.apple.quarantine'
 abbr -a mcsv 'open -a Modern\ CSV'
 abbr -a md 'GITHUB_TOKEN=$__GITHUB_TOKEN mise dev'
-abbr -a me 'open -a MarkEdit'
 abbr -a mi 'GITHUB_TOKEN=$__GITHUB_TOKEN mise i'
 abbr -a mise 'GITHUB_TOKEN=$__GITHUB_TOKEN mise'
 abbr -a mk 'minikube'
@@ -242,5 +239,5 @@ abbr -a vi nvim
 abbr -a vim nvim
 abbr -a vue 'pnpm run vue'
 abbr -a w wrangler
-abbr -a y 'yt-dlp --cookies-from-browser firefox'
+abbr -a y 'yt-dlp --cookies-from-browser chrome --remux-video mkv'
 abbr -a zj zellij

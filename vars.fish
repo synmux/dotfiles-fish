@@ -10,7 +10,7 @@ set -gx CLOUDFLARE_EMAIL syn@syn.as
 set -gx CLOUDFLARE_R2_HOSTNAME $CLOUDFLARE_ACCOUNT_ID.r2.cloudflarestorage.com
 set -gx DISABLE_ZELLIJ true
 set -gx __DOMAINR_API_KEY $__RAPIDAPI_API_KEY
-set -gx EDITOR "zed --wait"
+set -gx EDITOR "devin desktop --wait"
 set -gx FPR 8EA4E68124FEA8B559F482A2943E9700DECFC535
 set -gx __GHIDRA_INSTALL_DIR "$HOME/.local/ghidra"
 set -gx GOOGLE_CLOUD_PROJECT sl1p-production
