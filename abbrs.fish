@@ -239,5 +239,5 @@ abbr -a vi nvim
 abbr -a vim nvim
 abbr -a vue 'pnpm run vue'
 abbr -a w wrangler
-abbr -a y 'yt-dlp --cookies-from-browser chrome --remux-video mkv'
+abbr -a y 'yt-dlp --cookies-from-browser chrome --recode-video mp4'
 abbr -a zj zellij
