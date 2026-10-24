@@ -22,6 +22,7 @@ set -gx __JEV_API_KEY $__TYPESAFE_API_KEY
 set -gx JAVA_HOME "/Library/Java/JavaVirtualMachines/graalvm-21.jdk/Contents/Home/"
 set -gx MCP_TIMEOUT 31556952 # 1 year, should be enough for MA Sequential Thinking. Affects Claude Code.
 set -gx MONO_GAC_PREFIX /opt/homebrew
+set -gx __MUSICBRAINZ_API_KEY $__METABRAINZ_API_KEY
 set -gx NAS_OPENSTACK_ENDPOINT "https://nas.oryx-hake.ts.net:8443/auth/v1.0"
 set -gx NAS_OPENSTACK_USERNAME_SUFFIX ":8H9canZ1hnMWJVKjSJ4B"
 set -gx NAS_S3_ENDPOINT "https://nas.oryx-hake.ts.net:8443"
