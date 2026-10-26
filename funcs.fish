@@ -66,7 +66,7 @@ function le-fw -d "Set up certs for the firewall"
 end
 
 function fzf --wraps="fzf" -d "Set up fzf"
-    set -Ux FZF_DEFAULT_OPTS "\
+    set -gx FZF_DEFAULT_OPTS "\
     --color=bg+:#313244,bg:#1E1E2E,spinner:#F5E0DC,hl:#F38BA8 \
     --color=fg:#CDD6F4,header:#F38BA8,info:#CBA6F7,pointer:#F5E0DC \
     --color=marker:#B4BEFE,fg+:#CDD6F4,prompt:#CBA6F7,hl+:#F38BA8 \
@@ -847,5 +847,32 @@ function backup-key --description "Backup GnuPG key. The FPR env variable must b
     else
         echo "Error: Failed to backup GnuPG key"
         return 1
+    end
+end
+
+function rbump-pnpm --description "Recursively bump packages to the latest version with pnpm"
+    for i in *
+        if test -f "$i/package.json"
+            pushd "$i"; and pnpm update
+            popd
+        end
+    end
+end
+
+function rcommit --description "Recursively commit changes to git" --argument-names "message"
+    for i in *
+        if test -d "$i/.git"
+            pushd "$i"; and git add -A .; and git commit -m "$message"; and git push
+            popd
+        end
+    end
+end
+
+function rpush --description "Recursively push changes to git"
+    for i in *
+        if test -d "$i/.git"
+            pushd "$i"; and git push
+            popd
+        end
     end
 end
