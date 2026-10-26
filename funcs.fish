@@ -859,6 +859,15 @@ function rbump-pnpm --description "Recursively bump packages to the latest versi
     end
 end
 
+function rbump-trunk --description "Recursively bump Trunk tools to the latest version"
+    for i in *
+        if test -f "$i/.trunk/trunk.yaml"
+            pushd "$i"; and trunk upgrade --yes-to-all
+            popd
+        end
+    end
+end
+
 function rcommit --description "Recursively commit changes to git" --argument-names "message"
     for i in *
         if test -d "$i/.git"
@@ -876,3 +885,4 @@ function rpush --description "Recursively push changes to git"
         end
     end
 end
+
