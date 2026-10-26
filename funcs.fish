@@ -859,6 +859,113 @@ function rbump-pnpm --description "Recursively bump packages to the latest versi
     end
 end
 
+function rbump-gem --description "Recursively bump Ruby gems to the latest version with bundler"
+    for i in *
+        if test -f "$i/Gemfile"
+            pushd "$i"; and bundle update --all
+            popd
+        end
+    end
+end
+
+function write-mise-version-file --description "Atomically replace an existing version file, preserving permissions and symlinks."
+    if test (count $argv) -lt 2
+        printf 'Usage: write-mise-version-file FILE LINE [LINE ...]\n' >&2
+        return 1
+    end
+    test -f "$argv[1]"; or return 1
+    set -l target_file (path resolve -- "$argv[1]")
+    or return 1
+    set -l temporary_file (command mktemp "$target_file.mise.XXXXXX")
+    or return 1
+
+    command cp -p -- "$target_file" "$temporary_file"
+    and printf '%s\n' $argv[2..-1] >"$temporary_file"
+    and command mv -f -- "$temporary_file" "$target_file"
+    set -l write_status $status
+
+    if test "$write_status" -ne 0
+        command rm -f -- "$temporary_file"
+        printf 'Could not update %s; original file retained.\n' "$argv[1]" >&2
+    end
+    return "$write_status"
+end
+
+function sync-mise-tool-versions --description "Update existing .tool-versions entries from active mise versions."
+    test -f .tool-versions; or return 0
+    test -s .tool-versions; or return 0
+    set -l updated_lines
+    while read -l original_line
+        # Leave blank lines and comment-only lines unchanged.
+        if string match -qr '^\s*(#.*)?$' -- "$original_line"
+            set -a updated_lines "$original_line"
+            continue
+        end
+        set -l tool_name (string match --regex --groups-only '^\s*(\S+)' -- "$original_line")
+        set -l active_versions (mise current "$tool_name")
+        set -l lookup_status $status
+        if test "$lookup_status" -ne 0; or not string match -qr '\S' -- $active_versions
+            printf 'Could not resolve %s; leaving .tool-versions unchanged.\n' "$tool_name" >&2
+            return 1
+        end
+        set -l updated_line "$tool_name "(string join ' ' -- $active_versions)
+        set -l comment (string match --regex '#.*$' -- "$original_line")
+        if test (count $comment) -gt 0
+            set updated_line "$updated_line $comment"
+        end
+        set -a updated_lines "$updated_line"
+    end <.tool-versions
+    # Replace the file only after every lookup has succeeded.
+    write-mise-version-file .tool-versions $updated_lines
+end
+
+function sync-mise-idiomatic-version-file --description "Resolve a runtime version before replacing its existing version file."
+    set -l version_file "$argv[1]"
+    test -f "$version_file"; or return 0
+    set -l resolved_version (mise exec -- $argv[2..-1])
+    set -l lookup_status $status
+    if test "$lookup_status" -ne 0; or not string match -qr '\S' -- $resolved_version
+        printf 'Could not resolve version; leaving %s unchanged.\n' "$version_file" >&2
+        return 1
+    end
+    write-mise-version-file "$version_file" $resolved_version
+end
+
+function sync-mise-version-files --description "Synchronise existing version files from active mise versions."
+    sync-mise-idiomatic-version-file .ruby-version ruby -e 'puts RUBY_VERSION'
+    or return 1
+    sync-mise-idiomatic-version-file .node-version node -p 'process.versions.node'
+    or return 1
+    sync-mise-idiomatic-version-file .python-version python -c 'import platform; print(platform.python_version())'
+    or return 1
+    sync-mise-tool-versions
+end
+
+function rbump-mise --description "Bump mise tools in immediate child projects and synchronise existing version files."
+    for project_directory in *
+        if not test -f "$project_directory/mise.toml"; and not test -f "$project_directory/.mise.toml"; and not test -f "$project_directory/.tool-versions"
+            continue
+        end
+        pushd "$project_directory"; or return 1
+        mise upgrade --bump --local; and sync-mise-version-files
+        set -l project_status $status
+        popd
+        or return 1
+        if test "$project_status" -ne 0
+            return "$project_status"
+        end
+    end
+end
+
+function rbump-cargo --description "Recursively bump Rust crates to the latest version with cargo"
+    for i in *
+        if test -f "$i/Cargo.toml"
+            pushd "$i"; and cargo upgrade; and cargo update; and cargo build
+            popd
+        end
+    end
+end
+
 function rbump-trunk --description "Recursively bump Trunk tools to the latest version"
     for i in *
         if test -f "$i/.trunk/trunk.yaml"
@@ -868,10 +975,23 @@ function rbump-trunk --description "Recursively bump Trunk tools to the latest v
     end
 end
 
+function rbump-go --description "Recursively bump Go modules to the latest version"
+    for i in *
+        if test -f "$i/go.mod"
+            pushd "$i"; and go get -u all ./...; and go mod tidy
+            popd
+        end
+    end
+end
+
 function rcommit --description "Recursively commit changes to git" --argument-names "message"
+    if not string match -qr '\S' -- "$message"
+        printf 'Usage: rcommit <message>\n' >&2
+        return 1
+    end
     for i in *
         if test -d "$i/.git"
-            pushd "$i"; and git add -A .; and git commit -m "$message"; and git push
+            pushd "$i"; and git add -A .; and git commit -m "$message" --no-verify
             popd
         end
     end
@@ -880,9 +1000,8 @@ end
 function rpush --description "Recursively push changes to git"
     for i in *
         if test -d "$i/.git"
-            pushd "$i"; and git push
+            pushd "$i"; and git push --no-verify
             popd
         end
     end
 end
-
