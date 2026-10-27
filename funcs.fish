@@ -989,6 +989,23 @@ function rbump-go --description "Recursively bump Go modules to the latest versi
     end
 end
 
+function rbump-gha --description "Recursively bump GitHub Actions to the latest version"
+    for i in */
+        set -l wf "$i/.github/workflows"
+        if test -d "$wf"
+            # Expand the glob explicitly
+            set -l files $wf/*.yml $wf/*.yaml
+            # If there was at least one match, files will be non-empty
+            if test (count $files) -gt 0
+                echo "Processing $i"
+                pushd $i
+                and pinact run -u
+                popd
+            end
+        end
+    end
+end
+
 function rcommit --description "Recursively commit changes to git" --argument-names "message"
     if not string match -qr '\S' -- "$message"
         printf 'Usage: rcommit <message>\n' >&2
