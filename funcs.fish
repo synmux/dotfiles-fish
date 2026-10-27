@@ -850,10 +850,15 @@ function backup-key --description "Backup GnuPG key. The FPR env variable must b
     end
 end
 
-function rbump-pnpm --description "Recursively bump packages to the latest version with pnpm"
+function rbump-nodejs --description "Recursively bump Node packages to the latest version with pnpm (bun for the tg repo)"
     for i in *
         if test -f "$i/package.json"
-            pushd "$i"; and pnpm update
+            pushd "$i"
+            if test "$i" = "tg"
+                bun update
+            else
+                pnpm update
+            end
             popd
         end
     end
