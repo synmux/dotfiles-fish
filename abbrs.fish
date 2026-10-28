@@ -81,7 +81,7 @@ abbr -a buni 'bun install'
 abbr -a bunr 'bun run'
 abbr -a c cargo
 abbr -a ci 'cargo install'
-abbr -a cio 'composio'
+abbr -a cio composio
 abbr -a cl claude
 abbr -a cm chezmoi
 abbr -a cme 'chezmoi edit'
@@ -89,7 +89,7 @@ abbr -a cmea 'chezmoi edit --apply'
 abbr -a cmeaf 'chezmoi edit --apply ~/.config/fish/'
 abbr -a cmeam 'chezmoi edit --apply ~/.config/mise/config.toml'
 abbr -a cmeas 'chezmoi edit --apply ~/.config/fish/secrets.fish'
-abbr -a cmm 'cleanmymac'
+abbr -a cmm cleanmymac
 abbr -a cmp 'chezmoi apply'
 abbr -a cmr 'chezmoi re-add'
 abbr -a cmu 'chezmoi update'
@@ -107,7 +107,7 @@ abbr -a de 'docker exec'
 abbr -a dei 'docker exec -it'
 abbr -a dev devcontainer
 abbr -a di 'docker images'
-abbr -a dig 'doggo'
+abbr -a dig doggo
 abbr -a dp 'docker pull'
 abbr -a dpa 'docker ps -a'
 abbr -a dr 'docker run'
@@ -148,7 +148,7 @@ abbr -a kg 'kubectl get'
 abbr -a kgp 'kubectl get pod'
 abbr -a kn1 'ssh -p212 dave@10.23.23.100'
 abbr -a kn1j 'ssh -J dave@10.0.101.10:212 dave@10.23.23.100'
-abbr -a kp 'keepassxc-cli'
+abbr -a kp keepassxc-cli
 abbr -a kpf 'kubectl port-forward'
 abbr -a l linkerd
 abbr -a lg lazygit
@@ -163,7 +163,7 @@ abbr -a mcsv 'open -a Modern\ CSV'
 abbr -a md 'GITHUB_TOKEN=$__GITHUB_TOKEN mise dev'
 abbr -a mi 'GITHUB_TOKEN=$__GITHUB_TOKEN mise i'
 abbr -a mise 'GITHUB_TOKEN=$__GITHUB_TOKEN mise'
-abbr -a mk 'minikube'
+abbr -a mk minikube
 abbr -a mkd 'mkdir -p'
 abbr -a ml 'GITHUB_TOKEN=$__GITHUB_TOKEN mise list'
 abbr -a mout 'GITHUB_TOKEN=$__GITHUB_TOKEN mise outdated'
@@ -171,7 +171,7 @@ abbr -a mp 'dekit mprocs'
 abbr -a mpr 'GITHUB_TOKEN=$__GITHUB_TOKEN mise prune'
 abbr -a mprocs 'dekit mprocs'
 abbr -a mtr 'GITHUB_TOKEN=$__GITHUB_TOKEN mise trust'
-abbr -a mu 'multipass'
+abbr -a mu multipass
 abbr -a mul 'multipass launch --bridged --name primary daily:26.10'
 abbr -a mun 'multipass set local.bridged-network=en7'
 abbr -a mush 'multipass shell'
@@ -206,6 +206,11 @@ abbr -a qc quickcommit
 abbr -a rimraf 'rm -rf'
 abbr -a rmq 'xattr -d com.apple.quarantine'
 abbr -a s skaffold
+abbr -a sas SwitchAudioSource
+abbr -a sasc 'SwitchAudioSource -c'
+abbr -a sasi 'SwitchAudioSource -t input -s'
+abbr -a saso 'SwitchAudioSource -t output -s'
+abbr -a sasq 'SwitchAudioSource -a'
 abbr -a sbrse 'sudo brew services'
 abbr -a sf 'subl ~/.config/fish'
 abbr -a sw switcher
