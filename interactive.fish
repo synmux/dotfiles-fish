@@ -54,9 +54,6 @@ switcher completion fish | source
 # docker
 docker completion fish | source
 
-# 1Password CLI plugins
-source ~/.config/op/plugins.sh
-
 # shadowenv
 shadowenv init fish | source
 
@@ -109,3 +106,8 @@ end
 # Added by ToolHive UI - do not modify this block
 fish_add_path -g $HOME/.toolhive/bin
 # End ToolHive UI
+
+# 1password shell integrations
+if test -f $HOME/.config/op/plugins.sh
+    source $HOME/.config/op/plugins.sh
+end
