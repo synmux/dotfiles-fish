@@ -130,7 +130,7 @@ abbr -a gd 'git diff'
 abbr -a genderbase 'cd $HOME/src/github.com/daveio/genderbase'
 abbr -a gf 'git fetch'
 abbr -a gfci 'git -c core.editor="fast-conventional editor" commit'
-abbr -a gha 'GITHUB_TOKEN=$__GITHUB_TOKEN'
+abbr -a ght 'GITHUB_TOKEN="op://Personal/GitHub Personal Access Token/token" op run --'
 abbr -a gl glooctl
 abbr -a glog 'git log'
 abbr -a gp 'git p'
