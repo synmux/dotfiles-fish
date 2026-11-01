@@ -175,7 +175,7 @@ abbr -a mu multipass
 abbr -a mul 'multipass launch --bridged --name primary daily:26.10'
 abbr -a mun 'multipass set local.bridged-network=en7'
 abbr -a mush 'multipass shell'
-abbr -a mup 'GITHUB_TOKEN=$__GITHUB_TOKEN mise upgrade'
+abbr -a mup 'GITHUB_TOKEN=$__GITHUB_TOKEN mise upgrade --bump'
 abbr -a muse 'GITHUB_TOKEN=$__GITHUB_TOKEN mise use'
 abbr -a n nerdctl
 abbr -a nas 'command ssh nas'
@@ -237,7 +237,7 @@ abbr -a tu 'trunk upgrade'
 abbr -a tw gittower
 abbr -a ty 'open -a Typora'
 abbr -a u upctl
-abbr -a up 'sudo chown -R dave:staff /opt/homebrew && GITHUB_TOKEN=$__GITHUB_TOKEN topgrade && GITHUB_TOKEN=$__GITHUB_TOKEN mise upgrade'
+abbr -a up 'sudo chown -R dave:staff /opt/homebrew && GITHUB_TOKEN=$__GITHUB_TOKEN topgrade && GITHUB_TOKEN=$__GITHUB_TOKEN mise upgrade --bump'
 abbr -a v vue
 abbr -a venv 'python -m venv'
 abbr -a vi nvim
