@@ -158,7 +158,7 @@ abbr -a loop 'adb -s adb-GNFMGBD3PAA000011-FVqS8U._adb-tls-connect._tcp'
 abbr -a loop-local 'adb -s GNFMGBD3PAA000011'
 abbr -a ls 'eza --icons=always --hyperlink --git --git-repos --group-directories-first -O'
 abbr -a m 'open -a MarkViewer'
-abbr -a marksafe 'xattr -d com.apple.quarantine'
+abbr -a marksafe 'xattr -rd com.apple.quarantine'
 abbr -a mcsv 'open -a Modern\ CSV'
 abbr -a md 'GITHUB_TOKEN=$__GITHUB_TOKEN mise dev'
 abbr -a mi 'GITHUB_TOKEN=$__GITHUB_TOKEN mise i'
@@ -204,7 +204,7 @@ abbr -a pr 'gh pr create --fill-verbose'
 abbr -a pu pulumi
 abbr -a qc quickcommit
 abbr -a rimraf 'rm -rf'
-abbr -a rmq 'xattr -d com.apple.quarantine'
+abbr -a rmq 'xattr -rd com.apple.quarantine'
 abbr -a s skaffold
 abbr -a sas SwitchAudioSource
 abbr -a sasc 'SwitchAudioSource -c'
