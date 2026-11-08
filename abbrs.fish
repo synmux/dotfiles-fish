@@ -184,7 +184,7 @@ abbr -a oco 'oco --fgm --yes'
 abbr -a p 'cco -ay'
 abbr -a pf 'open -a "Path Finder"'
 abbr -a pg 'pgrep -lf'
-abbr -a ping gping
+abbr -a ping 'sping --diagnose --view extended'
 abbr -a pio platformio
 abbr -a pk 'pkill -lf'
 abbr -a pn pnpm
