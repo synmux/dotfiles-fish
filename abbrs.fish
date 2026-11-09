@@ -160,23 +160,23 @@ abbr -a ls 'eza --icons=always --hyperlink --git --git-repos --group-directories
 abbr -a m 'open -a MarkViewer'
 abbr -a marksafe 'xattr -rd com.apple.quarantine'
 abbr -a mcsv 'open -a Modern\ CSV'
-abbr -a md 'GITHUB_TOKEN=$__GITHUB_TOKEN mise dev'
-abbr -a mi 'GITHUB_TOKEN=$__GITHUB_TOKEN mise i'
-abbr -a mise 'GITHUB_TOKEN=$__GITHUB_TOKEN mise'
+abbr -a md 'GITHUB_TOKEN=op://Personal/nd6b2x4fvuepit7rg5rhzipigq/token op run -- mise dev'
+abbr -a mi 'GITHUB_TOKEN=op://Personal/nd6b2x4fvuepit7rg5rhzipigq/token op run -- mise i'
+abbr -a mise 'GITHUB_TOKEN=op://Personal/nd6b2x4fvuepit7rg5rhzipigq/token op run -- mise'
 abbr -a mk minikube
 abbr -a mkd 'mkdir -p'
-abbr -a ml 'GITHUB_TOKEN=$__GITHUB_TOKEN mise list'
-abbr -a mout 'GITHUB_TOKEN=$__GITHUB_TOKEN mise outdated'
+abbr -a ml 'GITHUB_TOKEN=op://Personal/nd6b2x4fvuepit7rg5rhzipigq/token op run -- mise list'
+abbr -a mout 'GITHUB_TOKEN=op://Personal/nd6b2x4fvuepit7rg5rhzipigq/token op run -- mise outdated'
 abbr -a mp 'dekit mprocs'
-abbr -a mpr 'GITHUB_TOKEN=$__GITHUB_TOKEN mise prune'
+abbr -a mpr 'GITHUB_TOKEN=op://Personal/nd6b2x4fvuepit7rg5rhzipigq/token op run -- mise prune'
 abbr -a mprocs 'dekit mprocs'
-abbr -a mtr 'GITHUB_TOKEN=$__GITHUB_TOKEN mise trust'
+abbr -a mtr 'GITHUB_TOKEN=op://Personal/nd6b2x4fvuepit7rg5rhzipigq/token op run -- mise trust'
 abbr -a mu multipass
 abbr -a mul 'multipass launch --bridged --name primary daily:26.10'
 abbr -a mun 'multipass set local.bridged-network=en7'
 abbr -a mush 'multipass shell'
-abbr -a mup 'GITHUB_TOKEN=$__GITHUB_TOKEN mise upgrade --bump'
-abbr -a muse 'GITHUB_TOKEN=$__GITHUB_TOKEN mise use'
+abbr -a mup 'GITHUB_TOKEN=op://Personal/nd6b2x4fvuepit7rg5rhzipigq/token op run -- mise upgrade --bump'
+abbr -a muse 'GITHUB_TOKEN=op://Personal/nd6b2x4fvuepit7rg5rhzipigq/token op run -- mise use'
 abbr -a n nerdctl
 abbr -a nas 'command ssh nas'
 abbr -a o orbctl
@@ -237,7 +237,7 @@ abbr -a tu 'trunk upgrade'
 abbr -a tw gittower
 abbr -a ty 'open -a Typora'
 abbr -a u upctl
-abbr -a up 'sudo chown -R dave:staff /opt/homebrew && GITHUB_TOKEN=$__GITHUB_TOKEN topgrade && GITHUB_TOKEN=$__GITHUB_TOKEN mise upgrade --bump'
+abbr -a up 'sudo chown -R dave:staff /opt/homebrew && GITHUB_TOKEN=$__GITHUB_TOKEN topgrade && GITHUB_TOKEN=op://Personal/nd6b2x4fvuepit7rg5rhzipigq/token op run -- mise upgrade --bump'
 abbr -a v vue
 abbr -a venv 'python -m venv'
 abbr -a vi nvim
