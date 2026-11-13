@@ -52,3 +52,4 @@ set -gx THEFUCK_OVERRIDDEN_ALIASES br,d,dc,g,h,k,l,m,s,vi,vim
 set -gx __UPLOADTHING_TOKEN $__UPLOADTHING_API_KEY
 set -gx VIRTUAL_ENV_DISABLE_PROMPT true
 set -gx VISUAL $EDITOR
+set -gx W $HOME/work
