@@ -9,9 +9,11 @@ set -gx CLAUDE_CODE_SUBAGENT_MODEL opus
 set -gx CLOUDFLARE_EMAIL syn@syn.as
 set -gx __CLOUDFLARE_R2_API_TOKEN $__CLOUDFLARE_API_TOKEN
 set -gx CLOUDFLARE_R2_HOSTNAME $CLOUDFLARE_ACCOUNT_ID.r2.cloudflarestorage.com
+set -gx CM $CHEZMOI_DIR
 set -gx DISABLE_ZELLIJ true
 set -gx __DOMAINR_API_KEY $__RAPIDAPI_API_KEY
 set -gx EDITOR "code --wait"
+set -gx FISH $HOME/.config/fish
 set -gx FPR 8EA4E68124FEA8B559F482A2943E9700DECFC535
 set -gx __GHIDRA_INSTALL_DIR "$HOME/.local/ghidra"
 set -gx GOOGLE_CLOUD_PROJECT sl1p-production
@@ -42,10 +44,11 @@ set -gx __SEMGREP_API_KEY $__SEMGREP_APP_TOKEN
 set -gx SERVERLESS_FRAMEWORK_FORCE_UPDATE true
 set -gx SHOW_ITERM2_WARNING false
 set -gx SLACK_TEAM_ID T03RUU56D
-set -gx SRC $HOME/src/github.com/synmux
-set -gx SRCHOME $SRC/github.com/daveio
+set -gx SM $HOME/src/github.com/synmux
+set -gx SRC $SM
 set -gx TAILSCALE_IPV4 (tailscale ip -4)
 set -gx TAILSCALE_IPV6 (tailscale ip -6)
 set -gx THEFUCK_OVERRIDDEN_ALIASES br,d,dc,g,h,k,l,m,s,vi,vim
 set -gx __UPLOADTHING_TOKEN $__UPLOADTHING_API_KEY
 set -gx VIRTUAL_ENV_DISABLE_PROMPT true
+set -gx VISUAL $EDITOR

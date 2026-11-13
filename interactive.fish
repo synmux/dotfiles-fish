@@ -23,6 +23,13 @@ function terminal-widget
   /Applications/TerminalWidget.app/Contents/MacOS/TerminalWidget $argv
 end
 
+# pnpm
+set -gx PNPM_HOME '/Users/syn/Library/pnpm'
+if test "$PATH[1]" != "$PNPM_HOME/bin"
+  set -gx PATH "$PNPM_HOME/bin" $PATH
+end
+# pnpm end
+
 # lowfat
 lowfat shell-init fish | source
 

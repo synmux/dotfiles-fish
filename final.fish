@@ -16,6 +16,9 @@ function mise --wraps="mise" -d "Wrapper for mise that blocks 'mise implode'"
     command mise $argv
 end
 
+# x-cmd
+test ! -e "$HOME/.x-cmd.root/local/data/fish/rc.fish" || source "$HOME/.x-cmd.root/local/data/fish/rc.fish" # boot up x-cmd.
+
 # gcloud
 source /opt/homebrew/share/google-cloud-sdk/path.fish.inc
 
