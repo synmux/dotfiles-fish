@@ -827,11 +827,11 @@ function backup-key --description "Backup GnuPG key. The FPR env variable must b
     set -l subkeys_file "$backup_stub-subkeys.asc"
     set -l ssh_file "$backup_stub-ssh.asc"
     set -l revoke_file "$backup_stub-revoke.asc"
-    gpg --export-secret-keys --armor > "$secret_file"
-    gpg --export-secret-subkeys --armor > "$subkeys_file"
-    gpg --export-ssh-key > "$ssh_file"
-    gpg --export --armor > "$public_file"
-    gpg --gen-revoke $FPR > "$revoke_file"
+    gpg --export-secret-keys --armor >"$secret_file"
+    gpg --export-secret-subkeys --armor >"$subkeys_file"
+    gpg --export-ssh-key >"$ssh_file"
+    gpg --export --armor >"$public_file"
+    gpg --gen-revoke $FPR >"$revoke_file"
     if test $status -eq 0
         echo
         echo
@@ -854,7 +854,7 @@ function rbump-nodejs --description "Recursively bump Node packages to the lates
     for i in *
         if test -f "$i/package.json"
             pushd "$i"
-            if test "$i" = "tg"
+            if test "$i" = tg
                 bun update
             else
                 pnpm update
@@ -1006,7 +1006,7 @@ function rbump-gha --description "Recursively bump GitHub Actions to the latest 
     end
 end
 
-function rcommit --description "Recursively commit changes to git" --argument-names "message"
+function rcommit --description "Recursively commit changes to git" --argument-names message
     if not string match -qr '\S' -- "$message"
         printf 'Usage: rcommit <message>\n' >&2
         return 1
@@ -1026,4 +1026,51 @@ function rpush --description "Recursively push changes to git"
             popd
         end
     end
+end
+
+function bump-actions --description 'Bump actions for all repositories in the specified root directory'
+    set -l repository_root /Users/syn/src/github.com/synmux
+    set -l results
+    for repository in "$repository_root"/*/
+        if not test -d "$repository/.git"
+            and not test -f "$repository/.git"
+            continue
+        end
+        set -l repository_name (basename "$repository")
+        printf '\n========== %s ==========\n' "$repository_name"
+        if not cd "$repository"
+            set -a results "$repository_name: directory access failed"
+            continue
+        end
+        pinact run -u
+        set -l pinact_status $status
+        if test $pinact_status -ne 0
+            set -a results "$repository_name: pinact failed ($pinact_status) commit and push skipped"
+            continue
+        end
+        cco -ay --prompt 'End the commit message with the exact trailer: Co-Authored-By: Warp <agent@warp.dev>'
+        set -l commit_status $status
+        if test $commit_status -ne 0
+            set -a results "$repository_name: cco failed ($commit_status) push skipped"
+            continue
+        end
+        if test "$repository_name" = infrastructure
+            pulumi preview --non-interactive
+            set -l preview_status $status
+            if test $preview_status -ne 0
+                set -a results "$repository_name: committed Pulumi preview failed ($preview_status) push skipped"
+                continue
+            end
+        end
+        git --no-pager push
+        set -l push_status $status
+        if test $push_status -ne 0
+            set -a results "$repository_name: committed push failed ($push_status)"
+        else
+            set -a results "$repository_name: sequence succeeded"
+        end
+    end
+    cd "$repository_root"
+    printf '\n========== FINAL RESULTS ==========\n'
+    printf '%s\n' $results
 end
