@@ -85,7 +85,7 @@ abbr -a carbonyld 'docker run --rm -ti fathyb/carbonyl'
 abbr -a c cargo
 abbr -a ci 'cargo install'
 abbr -a cio composio
-abbr -a cl claude
+abbr -a claude 'claude --system-prompt="$(serena prompts print-cc-system-prompt-override)"'
 abbr -a cm chezmoi
 abbr -a cme 'chezmoi edit'
 abbr -a cmea 'chezmoi edit --apply'
